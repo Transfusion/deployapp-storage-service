@@ -67,6 +67,8 @@ dependencies {
     implementation("com.vladmihalcea:hibernate-types-55:2.19.2") // for direct storage of JsonNodes in JPA
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // https://mvnrepository.com/artifact/com.h2database/h2
+    testImplementation("com.h2database:h2:2.1.214")
     testImplementation("org.springframework.amqp:spring-rabbit-test")
 }
 

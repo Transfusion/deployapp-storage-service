@@ -9,6 +9,7 @@ import org.mapstruct.factory.Mappers;
 
 @Mapper(componentModel = "spring")
 public interface AppBinaryMapper {
+
     default AppBinaryDTO toDTO(AppBinary a) {
         if (a instanceof Ipa) {
             return mapIpaToDTO((Ipa) a);
@@ -17,7 +18,7 @@ public interface AppBinaryMapper {
         }
     }
 
-    StorageCredentialMapper instance = Mappers.getMapper(StorageCredentialMapper.class);
+    AppBinaryMapper instance = Mappers.getMapper(AppBinaryMapper.class);
 
     //    @Mapping(target = "type", constant = S3Credential.IDENTIFIER)
     IpaDTO mapIpaToDTO(Ipa s);

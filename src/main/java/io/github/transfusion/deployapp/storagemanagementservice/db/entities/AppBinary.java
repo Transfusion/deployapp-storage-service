@@ -51,6 +51,28 @@ public abstract class AppBinary {
     @Column(name = "storage_credential")
     private UUID storageCredential;
 
+    @Column(name = "user_id")
+    private UUID userId;
+
+    @Column(name = "organization_id")
+    private UUID organizationId;
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
     public UUID getStorageCredential() {
         return storageCredential;
     }
