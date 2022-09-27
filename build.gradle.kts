@@ -66,10 +66,11 @@ dependencies {
     implementation("io.github.transfusion:app-info-java-graalvm:0.1.0-SNAPSHOT")
     implementation("com.vladmihalcea:hibernate-types-55:2.19.2") // for direct storage of JsonNodes in JPA
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-test") // already includes mockito
     // https://mvnrepository.com/artifact/com.h2database/h2
     testImplementation("com.h2database:h2:2.1.214")
     testImplementation("org.springframework.amqp:spring-rabbit-test")
+    testImplementation("org.springframework.security:spring-security-test")
 }
 
 tasks.withType<KotlinCompile> {

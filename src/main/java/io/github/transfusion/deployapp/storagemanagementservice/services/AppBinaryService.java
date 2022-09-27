@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -50,8 +51,8 @@ public class AppBinaryService {
     @Autowired
     private StorageService storageService;
 
-    @Autowired
-    private StorageCredsUpdateService storageCredsUpdateService;
+//    @Autowired
+//    private StorageCredsUpdateService storageCredsUpdateService;
 
     @Autowired
     private AppDetailsMapper appDetailsMapper;
@@ -105,8 +106,12 @@ public class AppBinaryService {
             // TODO: anonymous listing of uploads
         } else {
             UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
-            specification = specification.and(new AppBinarySpecification(new SearchCriteria("userId", "eq", userId)));
-            return appBinaryRepository.findAll(specification, pageable).map(AppBinaryMapper.instance::toDTO);
+            if (specification != null)
+                specification = specification.and(new AppBinarySpecification(new SearchCriteria("userId", "eq", userId)));
+            else specification = new AppBinarySpecification(new SearchCriteria("userId", "eq", userId));
+
+            Page<AppBinary> results = appBinaryRepository.findAll(specification, pageable);
+            return results.map(AppBinaryMapper.instance::toDTO);
         }
 
         return null;

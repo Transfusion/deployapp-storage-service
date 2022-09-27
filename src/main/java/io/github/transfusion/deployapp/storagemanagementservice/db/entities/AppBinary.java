@@ -14,7 +14,7 @@ public abstract class AppBinary {
 
     // do the generation ourselves
     @Id
-    @Column(name = "id", nullable = false)
+    @Column(name = "id", nullable = false, columnDefinition = "uuid")
     private UUID id;
 
     @Column(name = "version", nullable = false)
@@ -48,13 +48,13 @@ public abstract class AppBinary {
     @Column(name = "file_name", nullable = false, length = 50)
     private String fileName;
 
-    @Column(name = "storage_credential")
+    @Column(name = "storage_credential", columnDefinition = "uuid")
     private UUID storageCredential;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", columnDefinition = "uuid")
     private UUID userId;
 
-    @Column(name = "organization_id")
+    @Column(name = "organization_id", columnDefinition = "uuid")
     private UUID organizationId;
 
     public UUID getOrganizationId() {
