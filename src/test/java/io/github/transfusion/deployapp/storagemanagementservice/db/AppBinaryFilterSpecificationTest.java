@@ -1,21 +1,16 @@
 package io.github.transfusion.deployapp.storagemanagementservice.db;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinarySpecification;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.SearchCriteria;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.math.BigDecimal;
@@ -36,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 //@Transactional
 //@TransactionConfiguration
 //@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-public class AppBinarySpecificationTest {
+public class AppBinaryFilterSpecificationTest {
 
     @Autowired
     private AppBinaryRepository repository;
@@ -79,14 +74,14 @@ public class AppBinarySpecificationTest {
 
     @Test
     public void likeNameSpecification() {
-        AppBinarySpecification specification =
-                new AppBinarySpecification(new SearchCriteria("name", "like", "foo_"));
+        AppBinaryFilterSpecification specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", "foo_"));
         List<AppBinary> results = repository.findAll(specification);
         assertThat(foo, isIn(results));
         assertThat(bar, not(isIn(results)));
 
         specification =
-                new AppBinarySpecification(new SearchCriteria("name", "like", "bar_"));
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", "bar_"));
         results = repository.findAll(specification);
         assertThat(foo, not(isIn(results)));
         assertThat(bar, isIn(results));

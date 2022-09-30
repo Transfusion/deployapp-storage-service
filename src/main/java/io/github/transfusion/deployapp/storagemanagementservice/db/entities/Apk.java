@@ -9,6 +9,7 @@ import javax.persistence.*;
 @Table(name = "apk")
 @PrimaryKeyJoinColumn(name = "id")
 public class Apk extends AppBinary {
+    public static final String IDENTIFIER = "APK";
 //    @Id
 //    @Column(name = "id", nullable = false)
 //    private UUID id;

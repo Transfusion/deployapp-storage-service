@@ -3,8 +3,9 @@ package io.github.transfusion.deployapp.storagemanagementservice.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinarySpecification;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.SearchCriteria;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryTypeSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
@@ -24,7 +25,9 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import static io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService.IDENTIFIER_TO_CLASS_NAME;
 import static org.springframework.data.jpa.domain.Specification.where;
 
 
@@ -79,6 +82,7 @@ public class AppController {
                                    @RequestParam(required = false) List<String> searchKey,
                                    @RequestParam(required = false) List<String> searchOperation,
                                    @RequestParam(required = false) List<String> searchValue,
+                                   @RequestParam(required = false) List<String> types,
                                    Pageable page) {
 
         int searchKeySize = searchKey == null ? 0 : searchKey.size();
@@ -89,10 +93,19 @@ public class AppController {
             throw new IllegalArgumentException("invalid search criteria");
 
         // TODO: handle organization
+
         Specification<AppBinary> appBinarySpecification = where(null);
         for (int i = 0; i < searchKeySize; i++) {
-            appBinarySpecification.and(new AppBinarySpecification(new SearchCriteria(searchKey.get(i),
+            appBinarySpecification = appBinarySpecification.and(new AppBinaryFilterSpecification(new AppBinaryFilterCriteria(searchKey.get(i),
                     searchOperation.get(i), searchValue.get(i))));
+        }
+
+        if (types != null) {
+            List<Class<? extends AppBinary>> classes = types.stream().map(id -> IDENTIFIER_TO_CLASS_NAME.get(id)).collect(Collectors.toList());
+            Specification<AppBinary> appBinaryTypeSpecification = where(null);
+            for (Class<? extends AppBinary> c : classes)
+                appBinaryTypeSpecification = appBinaryTypeSpecification.or(new AppBinaryTypeSpecification(c));
+            appBinarySpecification = appBinarySpecification.and(appBinaryTypeSpecification);
         }
 
         if (organizationId == null)

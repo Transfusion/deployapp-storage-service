@@ -9,12 +9,12 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
-public class AppBinarySpecification implements Specification<AppBinary> {
+public class AppBinaryFilterSpecification implements Specification<AppBinary> {
 
-    private final SearchCriteria criteria;
+    private final AppBinaryFilterCriteria criteria;
 
-    public AppBinarySpecification(SearchCriteria searchCriteria) {
-        this.criteria = searchCriteria;
+    public AppBinaryFilterSpecification(AppBinaryFilterCriteria appBinaryFilterCriteria) {
+        this.criteria = appBinaryFilterCriteria;
     }
 
     @Override
@@ -30,7 +30,8 @@ public class AppBinarySpecification implements Specification<AppBinary> {
         if (criteria.getOperation().equalsIgnoreCase("like")) {
             if (root.get(criteria.getKey()).getJavaType() == String.class) {
                 return builder.like(
-                        root.<String>get(criteria.getKey()), "%" + criteria.getValue() + "%");
+                        builder.lower(root.<String>get(criteria.getKey())), builder.lower(builder.literal("%" + criteria.getValue() + "%"))
+                );
             } else {
                 return builder.equal(root.get(criteria.getKey()), criteria.getValue());
             }

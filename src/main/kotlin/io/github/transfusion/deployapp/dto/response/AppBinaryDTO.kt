@@ -6,6 +6,7 @@ import java.util.UUID
 
 interface AppBinaryDTO {
     val id: UUID
+    val type: String
     val version: String
     val build: String
     val uploadDate: Instant

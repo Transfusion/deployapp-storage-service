@@ -14,6 +14,7 @@ import java.util.List;
 @Table(name = "ipa")
 @PrimaryKeyJoinColumn(name = "id")
 public class Ipa extends AppBinary {
+    public static final String IDENTIFIER = "IPA";
 //    @Id
 //    @Column(name = "id", nullable = false)
 //    private UUID id;

@@ -7,12 +7,13 @@ import io.github.transfusion.app_info_java_graalvm.AppInfo.AppInfo;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Apk;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.IpaRepository;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinarySpecification;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.SearchCriteria;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import org.graalvm.polyglot.Context;
@@ -29,12 +30,20 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.time.Instant;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 
 @Service
 public class AppBinaryService {
+
+    public static Map<String, Class<? extends AppBinary>> IDENTIFIER_TO_CLASS_NAME = new HashMap<>();
+
+    static {
+        IDENTIFIER_TO_CLASS_NAME.put(Ipa.IDENTIFIER, Ipa.class);
+        IDENTIFIER_TO_CLASS_NAME.put(Apk.IDENTIFIER, Apk.class);
+    }
 
     /* private Context createContext() {
         Context ctx = Context.newBuilder().
@@ -81,6 +90,7 @@ public class AppBinaryService {
         AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
         AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
         if (data instanceof IPA) {
+            // TODO: anonymous detect and store
             SecurityContext context = SecurityContextHolder.getContext();
             Authentication authentication = context.getAuthentication();
             UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
@@ -107,8 +117,8 @@ public class AppBinaryService {
         } else {
             UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
             if (specification != null)
-                specification = specification.and(new AppBinarySpecification(new SearchCriteria("userId", "eq", userId)));
-            else specification = new AppBinarySpecification(new SearchCriteria("userId", "eq", userId));
+                specification = specification.and(new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("userId", "eq", userId)));
+            else specification = new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("userId", "eq", userId));
 
             Page<AppBinary> results = appBinaryRepository.findAll(specification, pageable);
             return results.map(AppBinaryMapper.instance::toDTO);

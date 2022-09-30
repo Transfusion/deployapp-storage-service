@@ -1,11 +1,28 @@
 package io.github.transfusion.deployapp.dto.response
 
 import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.databind.JsonNode
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
 
 data class IpaDTO(
+    // IPA-specific fields
+    val minSdkVersion: String,
+    val iphone: Boolean,
+    val ipad: Boolean,
+    val universal: Boolean,
+    val deviceType: String?,
+    val archs: List<String>,
+    val displayName: String?,
+    val releaseType: String?,
+    val buildType: String?,
+    val devices: List<String>?,
+    val teamName: String?,
+    val expiredDate: Date?,
+    val plistJson: JsonNode,
+
+    // AppBinary fields
     override val id: UUID,
     override val version: String,
     override val build: String,
@@ -19,4 +36,7 @@ data class IpaDTO(
     override val sizeBytes: BigDecimal,
     override val fileName: String,
     override val storageCredential: UUID
-) : AppBinaryDTO, java.io.Serializable
+) : AppBinaryDTO, java.io.Serializable {
+    override val type: String
+        get() = "IPA"
+}
