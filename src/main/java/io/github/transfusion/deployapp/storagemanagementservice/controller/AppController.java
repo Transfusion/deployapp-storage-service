@@ -3,8 +3,8 @@ package io.github.transfusion.deployapp.storagemanagementservice.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryTypeSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
@@ -112,5 +112,10 @@ public class AppController {
             return appBinaryService.findOwnPaginated(appBinarySpecification, page);
 
         return null;
+    }
+
+    @GetMapping("/binary/{id}")
+    public ResponseEntity<AppBinaryDTO> getAppBinaryById(@PathVariable("id") UUID id) {
+        return new ResponseEntity<>(appBinaryService.getAppBinaryById(id), HttpStatus.OK);
     }
 }

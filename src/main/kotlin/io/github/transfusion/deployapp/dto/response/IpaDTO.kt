@@ -19,7 +19,8 @@ data class IpaDTO(
     val buildType: String?,
     val devices: List<String>?,
     val teamName: String?,
-    val expiredDate: Date?,
+    @get:JsonFormat(shape = JsonFormat.Shape.STRING)
+    val expiredDate: Instant?,
     val plistJson: JsonNode,
 
     // AppBinary fields

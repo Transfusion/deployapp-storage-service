@@ -7,6 +7,7 @@ import io.github.transfusion.app_info_java_graalvm.AppInfo.AppInfo;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
+import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Apk;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -32,6 +34,7 @@ import java.io.File;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 
@@ -124,6 +127,20 @@ public class AppBinaryService {
             return results.map(AppBinaryMapper.instance::toDTO);
         }
 
+        return null;
+    }
+
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_READ')")
+    public AppBinaryDTO getAppBinaryById(UUID id) {
+        SecurityContext context = SecurityContextHolder.getContext();
+        Authentication authentication = context.getAuthentication();
+        if (authentication instanceof AnonymousAuthenticationToken) {
+            // TODO: anonymous listing of uploads
+        } else {
+            Optional<AppBinary> binary = appBinaryRepository.findById(id);
+            if (binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
+            return AppBinaryMapper.instance.toDTO(binary.get());
+        }
         return null;
     }
 }
