@@ -54,7 +54,7 @@ dependencies {
     implementation("org.postgresql:postgresql")
     implementation("org.flywaydb:flyway-core")
 
-    implementation("org.jobrunr:jobrunr-spring-boot-starter:5.2.0-RC1")
+    implementation("org.jobrunr:jobrunr-spring-boot-starter:5.3.0")
     implementation("org.apache.commons:commons-pool2:2.11.1")
 
     implementation("org.springframework.boot:spring-boot-starter-amqp")
@@ -65,6 +65,8 @@ dependencies {
 
     implementation("io.github.transfusion:app-info-java-graalvm:0.1.0-SNAPSHOT")
     implementation("com.vladmihalcea:hibernate-types-55:2.19.2") // for direct storage of JsonNodes in JPA
+
+    implementation("commons-io:commons-io:2.11.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") // already includes mockito
     // https://mvnrepository.com/artifact/com.h2database/h2

@@ -1,7 +1,9 @@
 package io.github.transfusion.deployapp.storagemanagementservice.db.entities;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import java.util.UUID;
@@ -10,20 +12,25 @@ import java.util.UUID;
 @Table(name = "app_binary_assets")
 public class AppBinaryAsset {
     @Id
-    @Column(name = "app_binary_id", nullable = false)
+    @Column(name = "id", nullable = false, columnDefinition = "uuid")
     private UUID id;
-
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "app_binary_id", nullable = false)
-    private AppBinary appBinary;
 
     @Column(name = "type", nullable = false, length = 10)
     private String type;
 
     @Column(name = "status", nullable = false, length = 15)
     private String status;
+
+    @Column(name = "file_name", length = 100)
+    private String fileName;
+
+    @Column(name = "description")
+    private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "app_binary_id", nullable = false)
+    private AppBinary appBinary;
 
     public UUID getId() {
         return id;
@@ -33,13 +40,6 @@ public class AppBinaryAsset {
         this.id = id;
     }
 
-    public AppBinary getAppBinary() {
-        return appBinary;
-    }
-
-    public void setAppBinary(AppBinary appBinary) {
-        this.appBinary = appBinary;
-    }
 
     public String getType() {
         return type;
@@ -57,10 +57,39 @@ public class AppBinaryAsset {
         this.status = status;
     }
 
-/*
-    TODO [JPA Buddy] create field to map the 'value' column
-     Available actions: Define target Java type | Uncomment as is | Remove column mapping
-    @Column(name = "value", columnDefinition = "json not null")
-    private Object value;
-*/
+    public JsonNode getValue() {
+        return value;
+    }
+
+    public void setValue(JsonNode value) {
+        this.value = value;
+    }
+
+    @Column(name = "asset_value", columnDefinition = "json")
+    @Type(type = "com.vladmihalcea.hibernate.type.json.JsonType")
+    private JsonNode value;
+
+    public AppBinary getAppBinary() {
+        return appBinary;
+    }
+
+    public void setAppBinary(AppBinary appBinary) {
+        this.appBinary = appBinary;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
 }

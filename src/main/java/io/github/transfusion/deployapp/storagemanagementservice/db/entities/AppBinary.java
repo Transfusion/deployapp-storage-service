@@ -57,6 +57,18 @@ public abstract class AppBinary {
     @Column(name = "organization_id", columnDefinition = "uuid")
     private UUID organizationId;
 
+    @Column(name = "description")
+    @Type(type = "org.hibernate.type.TextType")
+    private String description;
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public UUID getOrganizationId() {
         return organizationId;
     }

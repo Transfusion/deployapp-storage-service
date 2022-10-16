@@ -6,6 +6,7 @@ import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -14,12 +15,6 @@ public class IpaMobileprovision {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
-
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "id", nullable = false)
-    private Ipa ipa;
 
     @Column(name = "name")
     @Type(type = "org.hibernate.type.TextType")
@@ -63,20 +58,17 @@ public class IpaMobileprovision {
     @Column(name = "inhouse", nullable = false)
     private Boolean inhouse = false;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "app_binary_id", nullable = false)
+    private AppBinary appBinary;
+
     public UUID getId() {
         return id;
     }
 
     public void setId(UUID id) {
         this.id = id;
-    }
-
-    public Ipa getIpa() {
-        return ipa;
-    }
-
-    public void setIpa(Ipa ipa) {
-        this.ipa = ipa;
     }
 
     public String getName() {
@@ -183,28 +175,59 @@ public class IpaMobileprovision {
         this.inhouse = inhouse;
     }
 
-/*
-    TODO [JPA Buddy] create field to map the 'platforms' column
-     Available actions: Define target Java type | Uncomment as is | Remove column mapping
+    public List<String> getPlatforms() {
+        return platforms;
+    }
+
+    public void setPlatforms(List<String> platforms) {
+        this.platforms = platforms;
+    }
+
+    public List<String> getDevices() {
+        return devices;
+    }
+
+    public void setDevices(List<String> devices) {
+        this.devices = devices;
+    }
+
+    public List<String> getTeam_identifier() {
+        return team_identifier;
+    }
+
+    public void setTeam_identifier(List<String> team_identifier) {
+        this.team_identifier = team_identifier;
+    }
+
+    public List<String> getEnabled_capabilities() {
+        return enabled_capabilities;
+    }
+
+    public void setEnabled_capabilities(List<String> enabled_capabilities) {
+        this.enabled_capabilities = enabled_capabilities;
+    }
+
     @Column(name = "platforms", columnDefinition = "json")
-    private Object platforms;
-*/
-/*
-    TODO [JPA Buddy] create field to map the 'devices' column
-     Available actions: Define target Java type | Uncomment as is | Remove column mapping
+    @Type(type = "com.vladmihalcea.hibernate.type.json.JsonType")
+    private List<String> platforms;
+
     @Column(name = "devices", columnDefinition = "json")
-    private Object devices;
-*/
-/*
-    TODO [JPA Buddy] create field to map the 'team_identifier' column
-     Available actions: Define target Java type | Uncomment as is | Remove column mapping
+    @Type(type = "com.vladmihalcea.hibernate.type.json.JsonType")
+    private List<String> devices;
+
     @Column(name = "team_identifier", columnDefinition = "json")
-    private Object teamIdentifier;
-*/
-/*
-    TODO [JPA Buddy] create field to map the 'enabled_capabilities' column
-     Available actions: Define target Java type | Uncomment as is | Remove column mapping
+    @Type(type = "com.vladmihalcea.hibernate.type.json.JsonType")
+    private List<String> team_identifier;
+
     @Column(name = "enabled_capabilities", columnDefinition = "json")
-    private Object enabledCapabilities;
-*/
+    @Type(type = "com.vladmihalcea.hibernate.type.json.JsonType")
+    private List<String> enabled_capabilities;
+
+    public AppBinary getIpa() {
+        return appBinary;
+    }
+
+    public void setIpa(Ipa ipa) {
+        this.appBinary = ipa;
+    }
 }

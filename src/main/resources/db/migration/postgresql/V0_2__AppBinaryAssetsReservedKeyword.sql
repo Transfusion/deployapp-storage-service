@@ -1,0 +1,1 @@
+ALTER TABLE "public"."app_binary_assets" RENAME COLUMN "value" TO "asset_value";

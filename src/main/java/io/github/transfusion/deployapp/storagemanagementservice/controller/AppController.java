@@ -1,15 +1,27 @@
 package io.github.transfusion.deployapp.storagemanagementservice.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.github.transfusion.deployapp.dto.request.GenerateAssetRequest;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
+import io.github.transfusion.deployapp.dto.response.GenerateAssetResult;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryAsset;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryTypeSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
+import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants;
+import io.github.transfusion.deployapp.storagemanagementservice.services.assets.IPAAssetsService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.apache.commons.lang3.NotImplementedException;
+import org.jobrunr.jobs.JobId;
+import org.jobrunr.scheduling.JobScheduler;
+import org.jobrunr.storage.StorageProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +29,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,6 +47,8 @@ import static org.springframework.data.jpa.domain.Specification.where;
 @RestController
 @RequestMapping("/api/v1/app")
 public class AppController {
+
+    Logger logger = LoggerFactory.getLogger(AppController.class);
 
     @Autowired
     private StorageCredsUpdateService storageCredsUpdateService;
@@ -53,10 +68,10 @@ public class AppController {
     /**
      * Creates a new binary by autodetecting its type
      *
-     * @param storageCredentialId UUID
+     * @param storageCredentialId {@link java.util.UUID}
      * @param binary              multipart form-data file upload field
      * @param credentialCreatedOn
-     * @return ResponseEntity<AppBinaryDTO>
+     * @return {@link ResponseEntity<AppBinaryDTO>}
      * @throws IOException in the event that file operations fail
      */
     @RequestMapping(
@@ -115,7 +130,38 @@ public class AppController {
     }
 
     @GetMapping("/binary/{id}")
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
     public ResponseEntity<AppBinaryDTO> getAppBinaryById(@PathVariable("id") UUID id) {
         return new ResponseEntity<>(appBinaryService.getAppBinaryById(id), HttpStatus.OK);
     }
+
+    /* asset-related endpoints go below */
+
+    @Autowired
+    private IPAAssetsService ipaAssetsService;
+
+    @Autowired
+    private JobScheduler jobScheduler;
+
+    @Autowired
+    private StorageProvider storageProvider;
+
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
+    @PostMapping("/binary/{id}/generateAsset")
+    public GenerateAssetResult generateAsset(@PathVariable("id") UUID id,
+                                             @RequestBody GenerateAssetRequest request) {
+        if (request.getType().equals(Constants.IPA_ASSETS.MOBILEPROVISION.toString())) {
+//            JobId jobId = jobScheduler.<IPAAssetsService>enqueue(svc -> {
+//                AppBinaryAsset appBinaryAsset = svc.generateIPAMobileProvision(id);
+//                logger.info("mobileprovision gen done " + appBinaryAsset.getId());
+//            });
+            JobId jobId = jobScheduler.enqueue(() -> ipaAssetsService.generateIPAMobileProvision(id));
+//            logger.info("mobileprovision gen done " + appBinaryAsset.getId());
+            return new GenerateAssetResult(jobId.asUUID());
+        }
+        throw new NotImplementedException(String.format("Generating Assets of type %s is not implemented yet", request.getType()));
+    }
+
+
+
 }

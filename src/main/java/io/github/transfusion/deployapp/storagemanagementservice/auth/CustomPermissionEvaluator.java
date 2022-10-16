@@ -20,7 +20,7 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
     @Autowired
     private AppBinaryRepository appBinaryRepository;
 
-    private boolean checkAppBinaryRead(Authentication authentication, UUID id) {
+    private boolean checkAppBinaryEdit(Authentication authentication, UUID id) {
         if (authentication instanceof AnonymousAuthenticationToken) {
             // TODO: anonymous uploads
             return false;
@@ -36,8 +36,8 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
 
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
-        if (permission.equals("APPBINARY_READ")) {
-            return checkAppBinaryRead(authentication, (UUID) targetDomainObject);
+        if (permission.equals("APPBINARY_EDIT")) {
+            return checkAppBinaryEdit(authentication, (UUID) targetDomainObject);
         }
         return false;
     }

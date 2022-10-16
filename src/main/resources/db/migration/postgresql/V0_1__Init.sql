@@ -30,10 +30,13 @@ CREATE TABLE "public"."app_binary" (
 -- Table Definition
 CREATE TABLE "public"."app_binary_assets" (
     "app_binary_id" uuid NOT NULL,
-    "type" varchar(10) NOT NULL,
-    "value" json NOT NULL,
-    "status" varchar(15) NOT NULL,
-    PRIMARY KEY ("app_binary_id")
+    "type" varchar(50) NOT NULL,
+    "value" json,
+    "status" varchar(15),
+    "id" uuid NOT NULL,
+    "file_name" varchar(100),
+    "description" varchar(255),
+    PRIMARY KEY ("id")
 );
 
 -- This script only contains the table creation statements and does not fully represent the table in the database. It's still missing: indices, triggers. Do not use it as a backup.
@@ -73,37 +76,38 @@ CREATE TABLE "public"."ipa" (
 -- This script only contains the table creation statements and does not fully represent the table in the database. It's still missing: indices, triggers. Do not use it as a backup.
 
 -- Table Definition
-CREATE TABLE "public"."ipa_framework" (
-    "id" uuid NOT NULL,
-    "display_name" text,
-    "bundle_name" text,
-    "release_version" text,
-    "build_version" text,
-    "identifier" text,
-    "bundle_id" text,
-    "min_sdk_version" varchar,
-    "device_type" varchar,
-    "name" text,
-    "lib" bool NOT NULL,
-    "stored" bool NOT NULL,
-    PRIMARY KEY ("id")
-);
+-- CREATE TABLE "public"."ipa_framework" (
+--     "id" uuid NOT NULL,
+--     "display_name" text,
+--     "bundle_name" text,
+--     "release_version" text,
+--     "build_version" text,
+--     "identifier" text,
+--     "bundle_id" text,
+--     "min_sdk_version" varchar,
+--     "device_type" varchar,
+--     "name" text,
+--     "lib" bool NOT NULL,
+--     "stored" bool NOT NULL,
+--     PRIMARY KEY ("id")
+-- );
 
 -- This script only contains the table creation statements and does not fully represent the table in the database. It's still missing: indices, triggers. Do not use it as a backup.
 
 -- Table Definition
-CREATE TABLE "public"."ipa_icons" (
-    "id" uuid NOT NULL,
-    "name" text NOT NULL,
-    "dimensions" json NOT NULL,
-    PRIMARY KEY ("id")
-);
+-- CREATE TABLE "public"."ipa_icons" (
+--     "id" uuid NOT NULL,
+--     "name" text NOT NULL,
+--     "dimensions" json NOT NULL,
+--     PRIMARY KEY ("id")
+-- );
 
 -- This script only contains the table creation statements and does not fully represent the table in the database. It's still missing: indices, triggers. Do not use it as a backup.
 
 -- Table Definition
 CREATE TABLE "public"."ipa_mobileprovision" (
     "id" uuid NOT NULL,
+    "app_binary_id" uuid NOT NULL,
     "name" text,
     "app_name" text,
     "type" text,
@@ -127,32 +131,33 @@ CREATE TABLE "public"."ipa_mobileprovision" (
 -- This script only contains the table creation statements and does not fully represent the table in the database. It's still missing: indices, triggers. Do not use it as a backup.
 
 -- Table Definition
-CREATE TABLE "public"."ipa_mobileprovision_devcert" (
-    "id" uuid NOT NULL,
-    "name" text NOT NULL,
-    "created_date" timestamp NOT NULL,
-    "expired_date" timestamp NOT NULL,
-    PRIMARY KEY ("id")
-);
+-- CREATE TABLE "public"."ipa_mobileprovision_devcert" (
+--     "id" uuid NOT NULL,
+--     "name" text NOT NULL,
+--     "created_date" timestamp NOT NULL,
+--     "expired_date" timestamp NOT NULL,
+--     "pem" text NOT NULL,
+--     PRIMARY KEY ("id")
+-- );
 
 -- This script only contains the table creation statements and does not fully represent the table in the database. It's still missing: indices, triggers. Do not use it as a backup.
 
 -- Table Definition
-CREATE TABLE "public"."ipa_plugin" (
-    "id" uuid NOT NULL,
-    "display_name" text,
-    "bundle_name" text,
-    "release_version" text,
-    "build_version" text,
-    "identifier" text,
-    "bundle_id" text,
-    "min_sdk_version" varchar(10),
-    "device_type" varchar(10),
-    "name" text,
-    "lib" bool NOT NULL,
-    "stored" bool NOT NULL,
-    PRIMARY KEY ("id")
-);
+-- CREATE TABLE "public"."ipa_plugin" (
+--     "id" uuid NOT NULL,
+--     "display_name" text,
+--     "bundle_name" text,
+--     "release_version" text,
+--     "build_version" text,
+--     "identifier" text,
+--     "bundle_id" text,
+--     "min_sdk_version" varchar(10),
+--     "device_type" varchar(10),
+--     "name" text,
+--     "lib" bool NOT NULL,
+--     "stored" bool NOT NULL,
+--     PRIMARY KEY ("id")
+-- );
 
 -- This script only contains the table creation statements and does not fully represent the table in the database. It's still missing: indices, triggers. Do not use it as a backup.
 
@@ -185,12 +190,10 @@ CREATE TABLE "public"."storage_credentials" (
 ALTER TABLE "public"."apk" ADD FOREIGN KEY ("id") REFERENCES "public"."app_binary"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "public"."app_binary_assets" ADD FOREIGN KEY ("app_binary_id") REFERENCES "public"."app_binary"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "public"."app_binary_downloads" ADD FOREIGN KEY ("app_binary_id") REFERENCES "public"."app_binary"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."ipa_mobileprovision" ADD FOREIGN KEY ("app_binary_id") REFERENCES "public"."app_binary"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "public"."ipa" ADD FOREIGN KEY ("id") REFERENCES "public"."app_binary"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "public"."ipa_framework" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "public"."ipa_icons" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "public"."ipa_mobileprovision" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "public"."ipa_mobileprovision_devcert" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa_mobileprovision"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "public"."ipa_plugin" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- ALTER TABLE "public"."ipa_framework" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- ALTER TABLE "public"."ipa_icons" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- ALTER TABLE "public"."ipa_mobileprovision_devcert" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa_mobileprovision"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- ALTER TABLE "public"."ipa_plugin" ADD FOREIGN KEY ("id") REFERENCES "public"."ipa"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "public"."s3_credentials" ADD FOREIGN KEY ("id") REFERENCES "public"."storage_credentials"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
-alter table "public"."app_binary" add CONSTRAINT "user_or_org_not_null" check (organization_id is not null or user_id is not null)

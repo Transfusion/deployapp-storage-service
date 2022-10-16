@@ -76,7 +76,7 @@ public class AppBinaryService {
         UUID id = UUID.randomUUID();
 //        final String fileName = String.format("%s-%s-%s.ipa", ipa.bundle_id(), ipa.build_version(), ipa.release_version());
         // attempt to upload first
-        storageService.uploadPrivateObject(storageCredentialId, credentialCreatedOn, id,
+        storageService.uploadPrivateAppBinaryObject(storageCredentialId, credentialCreatedOn, id,
 //                String.format("%s-%s-%s.ipa", ipa.bundle_id(), ipa.build_version(), ipa.release_version())
                 "binary.ipa", binary);
         // before saving into the db
@@ -130,17 +130,16 @@ public class AppBinaryService {
         return null;
     }
 
-    @PreAuthorize("hasPermission(#id, 'APPBINARY_READ')")
     public AppBinaryDTO getAppBinaryById(UUID id) {
-        SecurityContext context = SecurityContextHolder.getContext();
-        Authentication authentication = context.getAuthentication();
-        if (authentication instanceof AnonymousAuthenticationToken) {
-            // TODO: anonymous listing of uploads
-        } else {
+//        SecurityContext context = SecurityContextHolder.getContext();
+//        Authentication authentication = context.getAuthentication();
+//        if (authentication instanceof AnonymousAuthenticationToken) {
+//            // TODO: anonymous listing of uploads
+//        } else {
             Optional<AppBinary> binary = appBinaryRepository.findById(id);
             if (binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
             return AppBinaryMapper.instance.toDTO(binary.get());
-        }
-        return null;
+//        }
+//        return null;
     }
 }
