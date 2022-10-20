@@ -1,0 +1,1 @@
+ALTER TABLE "public"."app_binary_jobs" ADD COLUMN "created_date" timestamp NOT NULL DEFAULT NOW();

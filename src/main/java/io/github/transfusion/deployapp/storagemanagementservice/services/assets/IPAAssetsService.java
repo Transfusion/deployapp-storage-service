@@ -3,7 +3,6 @@ package io.github.transfusion.deployapp.storagemanagementservice.services.assets
 import io.github.transfusion.app_info_java_graalvm.AbstractPolyglotAdapter;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.AppInfo;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
-import io.github.transfusion.deployapp.storagemanagementservice.controller.AppController;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryAsset;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
@@ -12,6 +11,7 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.IpaMobileprovisionRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.MobileProvisionMapper;
+import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
 import org.graalvm.polyglot.Context;
@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,8 +61,19 @@ public class IPAAssetsService {
     @Autowired
     private IpaMobileprovisionRepository ipaMobileprovisionRepository;
 
+    @Autowired
+    private AppBinaryJobService appBinaryJobService;
+
+    public AppBinaryAsset generateIPAMobileProvision(UUID jobId, UUID appBinaryId) throws IOException {
+        appBinaryJobService.createJob(jobId, appBinaryId, "Generating .mobileprovision", "In Progress");
+        AppBinaryAsset asset = generateIPAMobileProvision(appBinaryId);
+        appBinaryJobService.deleteJobSilent(jobId);
+        return asset;
+    }
+
     /**
      * @param appBinaryId the {@link java.util.UUID} of an {@link Ipa}
+     * @return the {@link AppBinaryAsset} entity
      */
     // TODO: during testing, mock appBinaryRepository, the StorageService that returns a file, and catch the exceptions
     @Transactional
