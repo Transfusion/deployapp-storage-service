@@ -28,8 +28,9 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-import static io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants.IPA_ASSETS.MOBILEPROVISION;
+import static io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants.IPA_ASSET.MOBILEPROVISION;
 
+@Transactional
 @Service
 public class IPAAssetsService {
 
@@ -76,7 +77,6 @@ public class IPAAssetsService {
      * @return the {@link AppBinaryAsset} entity
      */
     // TODO: during testing, mock appBinaryRepository, the StorageService that returns a file, and catch the exceptions
-    @Transactional
     public AppBinaryAsset generateIPAMobileProvision(UUID appBinaryId) throws IOException {
         Optional<AppBinary> _binary = appBinaryRepository.findById(appBinaryId);
         if (_binary.isEmpty()) throw new IllegalArgumentException(String.format("%s doesn't exist", appBinaryId));
@@ -101,6 +101,9 @@ public class IPAAssetsService {
                 mobileProvisionFile.getName(), mobileProvisionFile);
 
         // record in DB
+
+        // delete all existing MOBILEPROVISIONs
+        appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, MOBILEPROVISION.toString());
         AppBinaryAsset asset = new AppBinaryAsset();
         asset.setFileName(mobileProvisionFile.getName());
         asset.setId(UUID.randomUUID());

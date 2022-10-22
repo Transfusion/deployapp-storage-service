@@ -18,7 +18,7 @@ public class AppBinaryAsset {
     @Column(name = "type", nullable = false, length = 10)
     private String type;
 
-    @Column(name = "status", nullable = false, length = 15)
+    @Column(name = "status", length = 15)
     private String status;
 
     @Column(name = "file_name", length = 100)

@@ -2,17 +2,18 @@ package io.github.transfusion.deployapp.storagemanagementservice.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.dto.request.GenerateAssetRequest;
+import io.github.transfusion.deployapp.dto.response.AppBinaryAssetDTO;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.dto.response.AppBinaryJobDTO;
 import io.github.transfusion.deployapp.dto.response.GenerateAssetResult;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
-import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryAsset;
+import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryAssetRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryTypeSpecification;
+import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryAssetMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryJobMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
-import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
@@ -153,7 +154,7 @@ public class AppController {
     @PostMapping("/binary/{id}/generateAsset")
     public GenerateAssetResult generateAsset(@PathVariable("id") UUID id,
                                              @RequestBody GenerateAssetRequest request) {
-        if (request.getType().equals(Constants.IPA_ASSETS.MOBILEPROVISION.toString())) {
+        if (request.getType().equals(Constants.IPA_ASSET.MOBILEPROVISION.toString())) {
             UUID random = UUID.randomUUID();
             JobId jobId = jobScheduler.enqueue(random, () -> ipaAssetsService.generateIPAMobileProvision(random, id));
             return new GenerateAssetResult(jobId.asUUID());
@@ -172,6 +173,18 @@ public class AppController {
     public ResponseEntity<List<AppBinaryJobDTO>> getAssetJobs(@PathVariable("id") UUID id) {
         return new ResponseEntity<>(
                 appBinaryJobService.getJobs(id).stream().map(appBinaryJobMapper::mapAppBinaryJobToDTO).collect(Collectors.toList()), HttpStatus.OK);
+    }
+
+    @Autowired
+    private AppBinaryAssetRepository appBinaryAssetRepository;
+
+    @Autowired
+    private AppBinaryAssetMapper appBinaryAssetMapper;
+
+    @GetMapping("/binary/{id}/assets")
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
+    public ResponseEntity<List<AppBinaryAssetDTO>> getAppBinaryAssets(@PathVariable("id") UUID id) {
+        return new ResponseEntity<>(appBinaryAssetRepository.findByAppBinaryId(id).stream().map(appBinaryAssetMapper::mapAppBinaryAssetToDTO).collect(Collectors.toList()), HttpStatus.OK);
     }
 
 }
