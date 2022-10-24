@@ -23,7 +23,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -136,10 +135,19 @@ public class AppBinaryService {
 //        if (authentication instanceof AnonymousAuthenticationToken) {
 //            // TODO: anonymous listing of uploads
 //        } else {
-            Optional<AppBinary> binary = appBinaryRepository.findById(id);
-            if (binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
-            return AppBinaryMapper.instance.toDTO(binary.get());
+            Optional<AppBinary> _binary = appBinaryRepository.findById(id);
+            if (_binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
+            return AppBinaryMapper.instance.toDTO(_binary.get());
 //        }
 //        return null;
+    }
+
+    public AppBinary setDescription(UUID id, String description) {
+        Optional<AppBinary> _binary = appBinaryRepository.findById(id);
+        if (_binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
+
+        AppBinary binary = _binary.get();
+        binary.setDescription(description);
+        return appBinaryRepository.save(binary);
     }
 }

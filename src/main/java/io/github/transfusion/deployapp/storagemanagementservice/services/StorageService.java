@@ -19,10 +19,15 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -34,6 +39,10 @@ public class StorageService {
 
     static String getS3PrivateFileKey(UUID appBinaryId, String name) {
         return String.format("%s%s/%s", S3Credential.PRIVATE_PREFIX, appBinaryId, name);
+    }
+
+    static String getS3PublicFileKey(UUID appBinaryId, String name) {
+        return String.format("%s%s/%s", S3Credential.PUBLIC_PREFIX, appBinaryId, name);
     }
 
     @Autowired
@@ -53,6 +62,18 @@ public class StorageService {
         }
         clientBuilder.credentialsProvider(StaticCredentialsProvider.create(awsCreds));
         return clientBuilder.build();
+    }
+
+    private S3Presigner getS3Presigner(S3Credential s3Creds) {
+        S3Presigner.Builder preSignerBuilder = S3Presigner.builder();
+        if (StringUtils.isEmpty(s3Creds.getAwsRegion())) {
+            String endpoint = s3Creds.getServer().replace("https://", "");
+            URI uri = URI.create(String.format("https://%s", endpoint));
+            preSignerBuilder.endpointOverride(uri);
+        } else {
+            preSignerBuilder.region(Region.of(s3Creds.getAwsRegion()));
+        }
+        return preSignerBuilder.build();
     }
 
     private PutObjectResponse uploadPrivateAppBinaryObject(S3Credential s3Creds, UUID appBinaryId, String name, File binary) {
@@ -128,6 +149,57 @@ public class StorageService {
             throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
 //            TODO: fill in other credential methods
         }
+    }
+
+    /* AppBinaryAsset-related methods go below */
+
+    /**
+     * S3-specific version of {@link #getURL(UUID, Instant, UUID, String, boolean)}
+     *
+     * @param s3Creds
+     * @param appBinaryId
+     * @param name
+     * @param _private
+     * @return
+     */
+    public URL getURL(S3Credential s3Creds, UUID appBinaryId, String name, boolean _private) {
+        S3Client client = getS3Client(s3Creds);
+        final String key = _private ? StorageService.getS3PrivateFileKey(appBinaryId, name) :
+                StorageService.getS3PublicFileKey(appBinaryId, name);
+        if (_private) {
+            GetObjectRequest objectRequest = GetObjectRequest.builder()
+                    .bucket(s3Creds.getBucket())
+                    .key(key)
+                    .build();
+
+            GetObjectPresignRequest request = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(60))
+                    .getObjectRequest(objectRequest).build();
+
+            S3Presigner presigner = getS3Presigner(s3Creds);
+            PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(request);
+            URL result = presignedGetObjectRequest.url();
+            presigner.close();
+            return result;
+        } else {
+            return client.utilities().getUrl(bldr -> bldr.bucket(s3Creds.getBucket()).key(key));
+        }
+    }
+
+    /**
+     * @param storageCredentialId the {@link java.util.UUID} of the given {@link StorageCredential}
+     * @param appBinaryId         the {@link java.util.UUID} of the {@link io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary} it is associated with
+     * @param name                a unique string identifying this file
+     * @param _private            Whether the asset in question is private
+     * @return downloadable {@link URL}
+     * @throws IOException
+     */
+    public URL getURL(UUID storageCredentialId, Instant credentialCreatedOn, UUID appBinaryId, String name, boolean _private) throws IOException {
+        StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
+
+        if (credential instanceof S3Credential) return getURL((S3Credential) credential, appBinaryId, name, _private);
+        throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+//            TODO: fill in other credential methods
     }
 
 }

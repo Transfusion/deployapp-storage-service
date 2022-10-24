@@ -1,6 +1,7 @@
 package io.github.transfusion.deployapp.storagemanagementservice.db.entities;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.github.transfusion.deployapp.storagemanagementservice.services.assets.AppBinaryAssetUtils;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.Type;
@@ -91,5 +92,10 @@ public class AppBinaryAsset {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+
+    public boolean isPrivate() {
+        return AppBinaryAssetUtils.isAssetPrivate(getType());
     }
 }

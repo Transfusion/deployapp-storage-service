@@ -17,4 +17,5 @@ interface AppBinaryDTO {
     val sizeBytes: BigDecimal
     val fileName: String
     val storageCredential: UUID
+    val description: String?
 }

@@ -36,7 +36,8 @@ data class IpaDTO(
     override val assetsOnFrontPage: Boolean,
     override val sizeBytes: BigDecimal,
     override val fileName: String,
-    override val storageCredential: UUID
+    override val storageCredential: UUID,
+    override val description: String?
 ) : AppBinaryDTO, java.io.Serializable {
     override val type: String
         get() = "IPA"

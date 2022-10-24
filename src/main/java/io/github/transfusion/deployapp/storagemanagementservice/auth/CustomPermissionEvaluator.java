@@ -3,6 +3,8 @@ package io.github.transfusion.deployapp.storagemanagementservice.auth;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryAsset;
+import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryAssetRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.PermissionEvaluator;
@@ -34,10 +36,29 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
         return appBinary.getUserId().equals(userId);
     }
 
+    @Autowired
+    private AppBinaryAssetRepository appBinaryAssetRepository;
+
+    private boolean checkAppBinaryAssetEdit(Authentication authentication, UUID id) {
+        Optional<AppBinaryAsset> _appBinaryAsset = appBinaryAssetRepository.findById(id);
+        if (_appBinaryAsset.isEmpty()) throw new ResourceNotFoundException("AppBinaryAsset", "id", id);
+        return checkAppBinaryEdit(authentication, _appBinaryAsset.get().getAppBinary().getId());
+    }
+
+    private boolean checkAppBinaryAssetPublic(UUID id) {
+        Optional<AppBinaryAsset> _appBinaryAsset = appBinaryAssetRepository.findById(id);
+        if (_appBinaryAsset.isEmpty()) throw new ResourceNotFoundException("AppBinaryAsset", "id", id);
+        return !_appBinaryAsset.get().isPrivate();
+    }
+
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
         if (permission.equals("APPBINARY_EDIT")) {
             return checkAppBinaryEdit(authentication, (UUID) targetDomainObject);
+        } else if (permission.equals("APPBINARYASSET_PRIVATE")) {
+            return checkAppBinaryAssetEdit(authentication, (UUID) targetDomainObject);
+        } else if (permission.equals("APPBINARYASSET_PUBLIC")) {
+            return checkAppBinaryAssetPublic((UUID) targetDomainObject);
         }
         return false;
     }

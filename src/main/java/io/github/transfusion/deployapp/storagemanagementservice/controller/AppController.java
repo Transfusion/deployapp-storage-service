@@ -2,6 +2,7 @@ package io.github.transfusion.deployapp.storagemanagementservice.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.dto.request.GenerateAssetRequest;
+import io.github.transfusion.deployapp.dto.request.PutAppBinaryDescriptionRequest;
 import io.github.transfusion.deployapp.dto.response.AppBinaryAssetDTO;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.dto.response.AppBinaryJobDTO;
@@ -17,7 +18,9 @@ import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinar
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants;
+import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.IPAAssetsService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.apache.commons.lang3.NotImplementedException;
@@ -30,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +43,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -139,6 +145,12 @@ public class AppController {
         return new ResponseEntity<>(appBinaryService.getAppBinaryById(id), HttpStatus.OK);
     }
 
+    @PutMapping("/binary/{id}/description")
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
+    public ResponseEntity<AppBinaryDTO> putAppBinaryDescription(@PathVariable("id") UUID id, @RequestBody PutAppBinaryDescriptionRequest body) {
+        return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.setDescription(id, body.getDescription())), HttpStatus.OK);
+    }
+
     /* asset-related endpoints go below */
 
     @Autowired
@@ -187,4 +199,25 @@ public class AppController {
         return new ResponseEntity<>(appBinaryAssetRepository.findByAppBinaryId(id).stream().map(appBinaryAssetMapper::mapAppBinaryAssetToDTO).collect(Collectors.toList()), HttpStatus.OK);
     }
 
+    @Autowired
+    private GeneralAssetsService generalAssetsService;
+
+    @GetMapping("/assets/{id}/getAuthorized")
+    @Operation(summary = "Redirects to the URL of the asset in question", description = "Checks if the current user is authorized to access this asset if it is private", tags = {"asset"})
+    @PreAuthorize("hasPermission(#id, 'APPBINARYASSET_PRIVATE')")
+    public ResponseEntity<Void> getAuthorized(@PathVariable("id") UUID id) throws IOException, URISyntaxException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(generalAssetsService.getURL(id).toURI());
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+
+
+    @GetMapping("/assets/{id}/get")
+    @Operation(summary = "Redirects to the URL of the asset in question", description = "Checks if the asset is public, throws a 403 error otherwise", tags = {"asset"})
+    @PreAuthorize("hasPermission(#id, 'APPBINARYASSET_PUBLIC')")
+    public ResponseEntity<Void> get(@PathVariable("id") UUID id) throws IOException, URISyntaxException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(generalAssetsService.getURL(id).toURI());
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
 }
