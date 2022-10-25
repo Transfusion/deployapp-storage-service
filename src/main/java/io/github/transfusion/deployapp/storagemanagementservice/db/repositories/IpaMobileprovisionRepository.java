@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface IpaMobileprovisionRepository extends JpaRepository<IpaMobileprovision, UUID> {
+    long deleteByAppBinaryId(UUID appBinaryId);
 }

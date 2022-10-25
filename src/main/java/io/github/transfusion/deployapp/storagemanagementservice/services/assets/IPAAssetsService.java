@@ -104,6 +104,8 @@ public class IPAAssetsService {
 
         // delete all existing MOBILEPROVISIONs
         appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, MOBILEPROVISION.toString());
+        ipaMobileprovisionRepository.deleteByAppBinaryId(appBinaryId);
+
         AppBinaryAsset asset = new AppBinaryAsset();
         asset.setFileName(mobileProvisionFile.getName());
         asset.setId(UUID.randomUUID());
