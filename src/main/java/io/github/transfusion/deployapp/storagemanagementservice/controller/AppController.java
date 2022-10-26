@@ -3,11 +3,9 @@ package io.github.transfusion.deployapp.storagemanagementservice.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.dto.request.GenerateAssetRequest;
 import io.github.transfusion.deployapp.dto.request.PutAppBinaryDescriptionRequest;
-import io.github.transfusion.deployapp.dto.response.AppBinaryAssetDTO;
-import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
-import io.github.transfusion.deployapp.dto.response.AppBinaryJobDTO;
-import io.github.transfusion.deployapp.dto.response.GenerateAssetResult;
+import io.github.transfusion.deployapp.dto.response.*;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.IpaMobileprovision;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryAssetRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
@@ -15,6 +13,7 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.specification
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryAssetMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryJobMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
+import io.github.transfusion.deployapp.storagemanagementservice.mappers.MobileProvisionMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
@@ -185,6 +184,14 @@ public class AppController {
     public ResponseEntity<List<AppBinaryJobDTO>> getAssetJobs(@PathVariable("id") UUID id) {
         return new ResponseEntity<>(
                 appBinaryJobService.getJobs(id).stream().map(appBinaryJobMapper::mapAppBinaryJobToDTO).collect(Collectors.toList()), HttpStatus.OK);
+    }
+
+    @Autowired
+    private MobileProvisionMapper mobileProvisionMapper;
+
+    @GetMapping("/binary/{id}/mobileprovisions")
+    public ResponseEntity<List<IpaMobileprovisionDTO>> getIpaMobileprovisions(@PathVariable("id") UUID id) {
+        return new ResponseEntity<>(ipaAssetsService.getIpaMobileprovisions(id).stream().map(mobileProvisionMapper::toDTO).collect(Collectors.toList()), HttpStatus.OK);
     }
 
     @Autowired

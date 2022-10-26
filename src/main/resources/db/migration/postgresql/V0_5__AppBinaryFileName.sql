@@ -1,0 +1,1 @@
+ALTER TABLE "public"."app_binary" ALTER COLUMN "file_name" SET DATA TYPE text;

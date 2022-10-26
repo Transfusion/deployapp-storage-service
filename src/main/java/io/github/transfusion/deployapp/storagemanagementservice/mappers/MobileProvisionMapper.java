@@ -1,10 +1,10 @@
 package io.github.transfusion.deployapp.storagemanagementservice.mappers;
 
 import io.github.transfusion.app_info_java_graalvm.AppInfo.MobileProvision;
+import io.github.transfusion.deployapp.dto.response.IpaMobileprovisionDTO;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.IpaMobileprovision;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,4 +32,6 @@ public abstract class MobileProvisionMapper {
     @Mapping(target = "team_identifier", expression = "java( m.team_identifier() == null ? null : java.util.Arrays.asList(m.team_identifier())   )")
     @Mapping(target = "enabled_capabilities", expression = "java( m.enabled_capabilities() == null ? null : java.util.Arrays.asList(m.enabled_capabilities()))")
     public abstract IpaMobileprovision mapPolyglotMobileProvisionToIpaMobileProvision(MobileProvision m);
+
+    public abstract IpaMobileprovisionDTO toDTO(IpaMobileprovision ipaMobileprovision);
 }

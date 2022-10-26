@@ -46,6 +46,6 @@ public class AppBinaryJobService {
         job.setName(name);
         job.setDescription(description);
         job.setCreatedDate(Instant.now());
-        return repository.save(job);
+        return repository.saveAndFlush(job);
     }
 }
