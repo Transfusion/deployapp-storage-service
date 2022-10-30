@@ -61,6 +61,17 @@ public abstract class AppBinary {
     @Type(type = "org.hibernate.type.TextType")
     private String description;
 
+    @Column(name = "available", nullable = false)
+    private Boolean available = false;
+
+    public Boolean getAvailable() {
+        return available;
+    }
+
+    public void setAvailable(Boolean available) {
+        this.available = available;
+    }
+
     public String getDescription() {
         return description;
     }

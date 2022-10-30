@@ -94,7 +94,7 @@ public class StorageService {
      * @param id                  the app binary ID
      * @param name                a unique string identifying this file
      * @param object              the {@link java.io.File} to be uploaded
-     * @throws JsonProcessingException
+     * @throws JsonProcessingException thrown if the main microservice is down
      */
     public void uploadPrivateAppBinaryObject(UUID storageCredentialId,
                                              Instant credentialCreatedOn,
@@ -200,6 +200,28 @@ public class StorageService {
         if (credential instanceof S3Credential) return getURL((S3Credential) credential, appBinaryId, name, _private);
         throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
 //            TODO: fill in other credential methods
+    }
+
+    private PutObjectResponse uploadPublicAppBinaryObject(S3Credential s3Creds, UUID appBinaryId, String name, File binary) {
+        final String key = StorageService.getS3PublicFileKey(appBinaryId, name);
+        S3Client client = getS3Client(s3Creds);
+        PutObjectRequest objectRequest = PutObjectRequest.builder()
+                .bucket(s3Creds.getBucket())
+                .key(key)
+                .build();
+        return client.putObject(objectRequest, RequestBody.fromFile(binary));
+    }
+    
+    public void uploadPublicAppBinaryObject(UUID storageCredentialId,
+                                            Instant credentialCreatedOn,
+                                            UUID id, String name, File object) throws JsonProcessingException {
+        StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
+        if (credential instanceof S3Credential) {
+            uploadPublicAppBinaryObject((S3Credential) credential, id, name, object);
+        } else {
+            throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+//            TODO: fill in other credential methods
+        }
     }
 
 }

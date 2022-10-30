@@ -23,7 +23,12 @@ data class ApkDTO(
     override val sizeBytes: BigDecimal,
     override val fileName: String,
     override val storageCredential: UUID,
-    override val description: String?
+    override val description: String?,
+
+    override val organizationId: UUID?,
+    override val userId: UUID?,
+
+    override val available: Boolean,
 ) : AppBinaryDTO, java.io.Serializable {
     override val type: String
         get() = "APK"

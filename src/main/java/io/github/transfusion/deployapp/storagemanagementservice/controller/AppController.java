@@ -2,10 +2,11 @@ package io.github.transfusion.deployapp.storagemanagementservice.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.dto.request.GenerateAssetRequest;
+import io.github.transfusion.deployapp.dto.request.PutAppBinaryAvailableRequest;
 import io.github.transfusion.deployapp.dto.request.PutAppBinaryDescriptionRequest;
 import io.github.transfusion.deployapp.dto.response.*;
+import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
-import io.github.transfusion.deployapp.storagemanagementservice.db.entities.IpaMobileprovision;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryAssetRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
@@ -17,7 +18,6 @@ import io.github.transfusion.deployapp.storagemanagementservice.mappers.MobilePr
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
-import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.IPAAssetsService;
@@ -36,9 +36,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -141,7 +143,15 @@ public class AppController {
     @GetMapping("/binary/{id}")
     @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
     public ResponseEntity<AppBinaryDTO> getAppBinaryById(@PathVariable("id") UUID id) {
-        return new ResponseEntity<>(appBinaryService.getAppBinaryById(id), HttpStatus.OK);
+        return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.getAppBinaryById(id)), HttpStatus.OK);
+    }
+
+    @GetMapping("/binary/{id}/public")
+    public ResponseEntity<AppBinaryDTO> getAppBinaryByIdPublic(@PathVariable("id") UUID id) {
+        AppBinary binary = appBinaryService.getAppBinaryById(id);
+        if (!binary.getAvailable())
+            throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
+        return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.getAppBinaryById(id)), HttpStatus.OK);
     }
 
     @PutMapping("/binary/{id}/description")
@@ -150,7 +160,15 @@ public class AppController {
         return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.setDescription(id, body.getDescription())), HttpStatus.OK);
     }
 
+    @PutMapping("/binary/{id}/available")
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
+    public ResponseEntity<AppBinaryDTO> putAppBinaryAvailable(@PathVariable("id") UUID id, @RequestBody PutAppBinaryAvailableRequest body) {
+        return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.setAvailable(id, body.getAvailable())), HttpStatus.OK);
+    }
+
     /* asset-related endpoints go below */
+    @Autowired
+    private GeneralAssetsService generalAssetsService;
 
     @Autowired
     private IPAAssetsService ipaAssetsService;
@@ -169,7 +187,12 @@ public class AppController {
             UUID random = UUID.randomUUID();
             JobId jobId = jobScheduler.enqueue(random, () -> ipaAssetsService.generateIPAMobileProvision(random, id));
             return new GenerateAssetResult(jobId.asUUID());
+        } else if (request.getType().equals(Constants.GENERAL_ASSET.PUBLIC_ICON.toString())) {
+            UUID random = UUID.randomUUID();
+            JobId jobId = jobScheduler.enqueue(random, () -> generalAssetsService.generatePublicIcon(random, id));
+            return new GenerateAssetResult(jobId.asUUID());
         }
+
         throw new NotImplementedException(String.format("Generating Assets of type %s is not implemented yet", request.getType()));
     }
 
@@ -206,8 +229,22 @@ public class AppController {
         return new ResponseEntity<>(appBinaryAssetRepository.findByAppBinaryId(id).stream().map(appBinaryAssetMapper::mapAppBinaryAssetToDTO).collect(Collectors.toList()), HttpStatus.OK);
     }
 
-    @Autowired
-    private GeneralAssetsService generalAssetsService;
+    @GetMapping("/binary/{id}/icon")
+    @Operation(summary = "Redirects to the URL of the icon", description = "Returns a url to a dummy icon if one doesn't exist", tags = {"asset"})
+    public ResponseEntity<Void> getPublicIcon(@PathVariable("id") UUID id) throws IOException, URISyntaxException {
+        HttpHeaders headers = new HttpHeaders();
+
+        try {
+            headers.setLocation(generalAssetsService.getPublicIcon(id).toURI());
+        } catch (ResourceNotFoundException e) {
+            URI location = ServletUriComponentsBuilder
+                    .fromCurrentRequest().path("../../../../../../../static/placeholder_app_icon.png")
+                    .build().toUri();
+            headers.setLocation(location);
+        }
+
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
 
     @GetMapping("/assets/{id}/getAuthorized")
     @Operation(summary = "Redirects to the URL of the asset in question", description = "Checks if the current user is authorized to access this asset if it is private", tags = {"asset"})

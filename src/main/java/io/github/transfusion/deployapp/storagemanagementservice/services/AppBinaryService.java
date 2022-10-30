@@ -62,6 +62,12 @@ public class AppBinaryService {
     @Autowired
     private StorageService storageService;
 
+    private AppBinary ensureBinaryAvailable(UUID id) {
+        Optional<AppBinary> _binary = appBinaryRepository.findById(id);
+        if (_binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
+        return _binary.get();
+    }
+
 //    @Autowired
 //    private StorageCredsUpdateService storageCredsUpdateService;
 
@@ -129,25 +135,27 @@ public class AppBinaryService {
         return null;
     }
 
-    public AppBinaryDTO getAppBinaryById(UUID id) {
+    public AppBinary getAppBinaryById(UUID id) {
 //        SecurityContext context = SecurityContextHolder.getContext();
 //        Authentication authentication = context.getAuthentication();
 //        if (authentication instanceof AnonymousAuthenticationToken) {
 //            // TODO: anonymous listing of uploads
 //        } else {
-            Optional<AppBinary> _binary = appBinaryRepository.findById(id);
-            if (_binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
-            return AppBinaryMapper.instance.toDTO(_binary.get());
+        AppBinary binary = ensureBinaryAvailable(id);
+        return binary;
 //        }
 //        return null;
     }
 
     public AppBinary setDescription(UUID id, String description) {
-        Optional<AppBinary> _binary = appBinaryRepository.findById(id);
-        if (_binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
-
-        AppBinary binary = _binary.get();
+        AppBinary binary = ensureBinaryAvailable(id);
         binary.setDescription(description);
+        return appBinaryRepository.save(binary);
+    }
+
+    public AppBinary setAvailable(UUID id, boolean available) {
+        AppBinary binary = ensureBinaryAvailable(id);
+        binary.setAvailable(available);
         return appBinaryRepository.save(binary);
     }
 }

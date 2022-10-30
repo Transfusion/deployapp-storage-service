@@ -1,0 +1,1 @@
+ALTER TABLE "public"."app_binary" ADD COLUMN "available" bool NOT NULL DEFAULT 'true';

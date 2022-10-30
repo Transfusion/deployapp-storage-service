@@ -14,4 +14,6 @@ public interface AppBinaryAssetRepository extends JpaRepository<AppBinaryAsset, 
     long deleteByAppBinaryIdAndType(UUID appBinaryId, String type);
 
     List<AppBinaryAsset> findByAppBinaryId(UUID id);
+
+    List<AppBinaryAsset> findByAppBinaryIdAndType(UUID id, String type);
 }
