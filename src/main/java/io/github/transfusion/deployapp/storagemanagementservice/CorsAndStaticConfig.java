@@ -7,16 +7,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-import org.springframework.web.servlet.config.annotation.CorsRegistration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.config.annotation.*;
 
 import java.util.List;
 
 @Configuration
 @EnableWebMvc
-public class CorsConfig {
+public class CorsAndStaticConfig {
     @Autowired
     private Environment env;
 
@@ -25,7 +22,19 @@ public class CorsConfig {
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
+
+        final String[] CLASSPATH_RESOURCE_LOCATIONS = {
+                "classpath:/static/"
+        };
+
         return new WebMvcConfigurer() {
+
+            @Override
+            public void addResourceHandlers(ResourceHandlerRegistry registry) {
+                registry.addResourceHandler("/static/**")
+                        .addResourceLocations(CLASSPATH_RESOURCE_LOCATIONS);
+            }
+
             @Override
             public void addCorsMappings(@NotNull CorsRegistry registry) {
 //                List<String> urls = env.getProperty("custom_cors.origins", List.class);
