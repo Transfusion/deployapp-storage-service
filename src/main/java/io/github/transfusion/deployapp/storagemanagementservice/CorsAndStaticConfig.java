@@ -39,9 +39,7 @@ public class CorsAndStaticConfig {
             public void addCorsMappings(@NotNull CorsRegistry registry) {
 //                List<String> urls = env.getProperty("custom_cors.origins", List.class);
                 CorsRegistration reg = registry.addMapping("/api/**");
-                for (String url : corsOrigins) {
-                    reg.allowedOrigins(url);
-                }
+                reg.allowedOrigins(corsOrigins.toArray(new String[0]));
                 reg.allowedHeaders("*").allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS").allowCredentials(true);
             }
         };
