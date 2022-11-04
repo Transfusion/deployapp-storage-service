@@ -31,6 +31,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+import static io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential.CUSTOM_AWS_REGION;
+
 /**
  * Interfaces with external storage services
  */
@@ -53,10 +55,11 @@ public class StorageService {
                 s3Creds.getAccessKey(),
                 s3Creds.getSecretKey());
         S3ClientBuilder clientBuilder = S3Client.builder();
-        if (StringUtils.isEmpty(s3Creds.getAwsRegion())) {
+        if (s3Creds.getAwsRegion().equals(CUSTOM_AWS_REGION)) {
             String endpoint = s3Creds.getServer().replace("https://", "");
             URI uri = URI.create(String.format("https://%s", endpoint));
             clientBuilder.endpointOverride(uri);
+            clientBuilder.region(Region.US_EAST_1); // the default
         } else {
             clientBuilder.region(Region.of(s3Creds.getAwsRegion()));
         }
@@ -66,10 +69,11 @@ public class StorageService {
 
     private S3Presigner getS3Presigner(S3Credential s3Creds) {
         S3Presigner.Builder preSignerBuilder = S3Presigner.builder();
-        if (StringUtils.isEmpty(s3Creds.getAwsRegion())) {
+        if (s3Creds.getAwsRegion().equals(CUSTOM_AWS_REGION)) {
             String endpoint = s3Creds.getServer().replace("https://", "");
             URI uri = URI.create(String.format("https://%s", endpoint));
             preSignerBuilder.endpointOverride(uri);
+            preSignerBuilder.region(Region.US_EAST_1);
         } else {
             preSignerBuilder.region(Region.of(s3Creds.getAwsRegion()));
         }
@@ -211,7 +215,7 @@ public class StorageService {
                 .build();
         return client.putObject(objectRequest, RequestBody.fromFile(binary));
     }
-    
+
     public void uploadPublicAppBinaryObject(UUID storageCredentialId,
                                             Instant credentialCreatedOn,
                                             UUID id, String name, File object) throws JsonProcessingException {
