@@ -68,6 +68,9 @@ public class StorageService {
     }
 
     private S3Presigner getS3Presigner(S3Credential s3Creds) {
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
+                s3Creds.getAccessKey(),
+                s3Creds.getSecretKey());
         S3Presigner.Builder preSignerBuilder = S3Presigner.builder();
         if (s3Creds.getAwsRegion().equals(CUSTOM_AWS_REGION)) {
             String endpoint = s3Creds.getServer().replace("https://", "");
@@ -77,6 +80,7 @@ public class StorageService {
         } else {
             preSignerBuilder.region(Region.of(s3Creds.getAwsRegion()));
         }
+        preSignerBuilder.credentialsProvider(StaticCredentialsProvider.create(awsCreds));
         return preSignerBuilder.build();
     }
 

@@ -11,6 +11,8 @@ public class S3Credential extends StorageCredential {
     public static final String IDENTIFIER = "S3";
     public static String PUBLIC_PREFIX = "public/";
     public static String PRIVATE_PREFIX = "private/";
+
+    public static String CUSTOM_AWS_REGION = "custom";
 //    @Id
 //    @Column(name = "id", nullable = false)
 //    private UUID id;
