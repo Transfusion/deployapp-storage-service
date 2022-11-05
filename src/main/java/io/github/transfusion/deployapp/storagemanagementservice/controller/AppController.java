@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.dto.request.GenerateAssetRequest;
 import io.github.transfusion.deployapp.dto.request.PutAppBinaryAvailableRequest;
 import io.github.transfusion.deployapp.dto.request.PutAppBinaryDescriptionRequest;
+import io.github.transfusion.deployapp.dto.request.UploadAppBinaryRequest;
 import io.github.transfusion.deployapp.dto.response.*;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
@@ -77,11 +78,7 @@ public class AppController {
     private AppBinaryMapper appBinaryMapper;
 
     /**
-     * Creates a new binary by autodetecting its type
-     *
-     * @param storageCredentialId {@link java.util.UUID}
-     * @param binary              multipart form-data file upload field
-     * @param credentialCreatedOn
+     * @param request {@link UploadAppBinaryRequest}
      * @return {@link ResponseEntity<AppBinaryDTO>}
      * @throws IOException in the event that file operations fail
      */
@@ -89,15 +86,12 @@ public class AppController {
             path = "/binary",
             method = RequestMethod.POST,
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<AppBinaryDTO> detectAndStoreBinary(@RequestParam(required = false) String organizationId,
-                                                             @RequestParam UUID storageCredentialId,
-                                                             @RequestParam("binary") MultipartFile binary,
-                                                             @RequestParam Instant credentialCreatedOn) throws IOException {
+    public ResponseEntity<AppBinaryDTO> detectAndStoreBinary(@ModelAttribute UploadAppBinaryRequest request) throws IOException {
 //        https://www.baeldung.com/spring-multipartfile-to-file
-        File tempFile = File.createTempFile("binary", binary.getOriginalFilename());
-        binary.transferTo(tempFile);
+        File tempFile = File.createTempFile("binary", request.getBinary().getOriginalFilename());
+        request.getBinary().transferTo(tempFile);
         // TODO: handle organization
-        AppBinary appBinary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, credentialCreatedOn, tempFile);
+        AppBinary appBinary = appBinaryService.detectAndStoreOwnBinary(request.getStorageCredentialId(), request.getCredentialCreatedOn(), tempFile);
         tempFile.delete();
         return new ResponseEntity<>(appBinaryMapper.toDTO(appBinary), HttpStatus.CREATED);
     }
@@ -152,6 +146,11 @@ public class AppController {
         if (!binary.getAvailable())
             throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
         return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.getAppBinaryById(id)), HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/binary/{id}/itmsplist", produces = {MediaType.TEXT_XML_VALUE})
+    public ResponseEntity<String> getITMSPlist(@PathVariable("id") UUID id) throws IOException {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(appBinaryService.getITMSPlist(id));
     }
 
     @PutMapping("/binary/{id}/description")

@@ -67,6 +67,9 @@ dependencies {
     implementation("com.vladmihalcea:hibernate-types-55:2.19.2") // for direct storage of JsonNodes in JPA
 
     implementation("commons-io:commons-io:2.11.0")
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-text
+    implementation(group = "org.apache.commons", name = "commons-text", version = "1.10.0");
+
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") // already includes mockito
     // https://mvnrepository.com/artifact/com.h2database/h2

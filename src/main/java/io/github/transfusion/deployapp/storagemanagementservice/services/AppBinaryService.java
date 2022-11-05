@@ -17,12 +17,18 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.specification
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
+import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringSubstitutor;
 import org.graalvm.polyglot.Context;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -30,6 +36,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -157,5 +165,46 @@ public class AppBinaryService {
         AppBinary binary = ensureBinaryAvailable(id);
         binary.setAvailable(available);
         return appBinaryRepository.save(binary);
+    }
+
+
+    @Autowired
+    private ResourceLoader resourceLoader;
+
+    @Autowired
+    private GeneralAssetsService generalAssetsService;
+
+    /**
+     * Populates manifest-template.txt with values from the AppBinary table.
+     *
+     * @param id {@link java.util.UUID} of the AppBinary
+     * @return the populated manifest.plist
+     * @throws IOException
+     */
+    public String getITMSPlist(UUID id) throws IOException {
+        AppBinary binary = ensureBinaryAvailable(id);
+        if (!(binary instanceof Ipa)) throw new IllegalArgumentException(String.format("%s is not an IPA.", id));
+        if (!binary.getAvailable())
+            throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
+        // load itms plist template from the ResourceLoader
+        Resource resource = resourceLoader.getResource("classpath:manifest-template.txt");
+        String template = AppBinaryUtils.resourceAsString(resource);
+
+        Map<String, String> valuesMap = new HashMap<>();
+        valuesMap.put("downloadableUrl", StringEscapeUtils.escapeXml(storageService.getURL(binary.getStorageCredential(), Instant.EPOCH,
+                id, "binary.ipa", true).toString()));
+
+        URL iconURL = generalAssetsService.getPublicIcon(id);
+        valuesMap.put("displayImage", StringEscapeUtils.escapeXml(iconURL.toString()));
+        valuesMap.put("fullSizeImage", StringEscapeUtils.escapeXml(iconURL.toString()));
+
+        valuesMap.put("bundleId", binary.getIdentifier());
+        valuesMap.put("bundleVersion", binary.getVersion());
+        valuesMap.put("name", binary.getName());
+        StringSubstitutor sub = new StringSubstitutor(valuesMap);
+
+        String g = sub.replace(template);
+        System.out.println(g);
+        return g;
     }
 }
