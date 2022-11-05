@@ -60,7 +60,7 @@ public abstract class AppDetailsMapper {
     @Mapping(target = "ipad", expression = "java( ipa.ipad() )")
     @Mapping(target = "universal", expression = "java( ipa.universal() )")
     @Mapping(target = "deviceType", expression = "java( ipa.device_type() )")
-    @Mapping(target = "archs", expression = "java( java.util.Arrays.asList(ipa.archs()) )")
+    @Mapping(target = "archs", expression = "java( ipa.archs() == null ? null : java.util.Arrays.asList(ipa.archs()) )")
     @Mapping(target = "displayName", expression = "java( ipa.display_name() )")
     @Mapping(target = "releaseType", expression = "java( ipa.release_type() )")
     @Mapping(target = "buildType", expression = "java( ipa.build_type() )")

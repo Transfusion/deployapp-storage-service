@@ -60,7 +60,7 @@ public class Ipa extends AppBinary {
 //    @Type(type = "org.hibernate.type.TextType")
 //    private String name;
 
-    @Column(name = "archs", columnDefinition = "json not null")
+    @Column(name = "archs", columnDefinition = "json")
 //    @Convert(converter = JsonStringListConverter.class)
     @Type(type = "com.vladmihalcea.hibernate.type.json.JsonType")
     private List<String> archs;
