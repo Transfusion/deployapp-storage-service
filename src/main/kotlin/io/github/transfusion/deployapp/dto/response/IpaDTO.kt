@@ -13,7 +13,7 @@ data class IpaDTO(
     val ipad: Boolean,
     val universal: Boolean,
     val deviceType: String?,
-    val archs: List<String>,
+    val archs: List<String>?,
     val displayName: String?,
     val releaseType: String?,
     val buildType: String?,
