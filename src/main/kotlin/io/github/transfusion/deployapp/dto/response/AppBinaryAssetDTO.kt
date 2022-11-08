@@ -1,6 +1,7 @@
 package io.github.transfusion.deployapp.dto.response
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants.ASSET_STATUS
 
 data class AppBinaryAssetDTO(
     val id: String,
@@ -8,7 +9,7 @@ data class AppBinaryAssetDTO(
     val appBinaryId: String,
 
     val type: String,
-    val status: String?,
+    val status: ASSET_STATUS?,
     val fileName: String?,
     val description: String?,
 

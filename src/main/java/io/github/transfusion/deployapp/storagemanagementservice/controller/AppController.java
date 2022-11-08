@@ -165,6 +165,13 @@ public class AppController {
         return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.setAvailable(id, body.getAvailable())), HttpStatus.OK);
     }
 
+    @DeleteMapping("/binary/{id}")
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
+    public ResponseEntity<Void> deleteAppBinaryById(@PathVariable("id") UUID id) throws JsonProcessingException {
+        appBinaryService.deleteAppBinaryById(id);
+        return ResponseEntity.noContent().build();
+    }
+
     /* asset-related endpoints go below */
     @Autowired
     private GeneralAssetsService generalAssetsService;

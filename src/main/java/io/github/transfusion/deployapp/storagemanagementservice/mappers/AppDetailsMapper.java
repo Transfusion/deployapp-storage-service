@@ -15,6 +15,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -64,9 +67,39 @@ public abstract class AppDetailsMapper {
     @Mapping(target = "displayName", expression = "java( ipa.display_name() )")
     @Mapping(target = "releaseType", expression = "java( ipa.release_type() )")
     @Mapping(target = "buildType", expression = "java( ipa.build_type() )")
-    @Mapping(target = "devices", expression = "java( ipa.devices() == null ? null : java.util.Arrays.asList(ipa.devices()) )")
-    @Mapping(target = "teamName", expression = "java( ipa.team_name() )")
-    @Mapping(target = "expiredDate", expression = "java( ipa.expired_date().toInstant() )")
+    @Mapping(target = "devices", source = "ipa", qualifiedByName = "mapPolyglotIPAtoIpaDevices")
+    @Mapping(target = "teamName", source = "ipa", qualifiedByName = "mapPolyglotIPAtoIpaTeamName")
+    @Mapping(target = "expiredDate", source = "ipa", qualifiedByName = "mapPolyglotIPAtoIpaExpiredDate")
     @Mapping(target = "plistJson", source = "ipa", qualifiedByName = "infoPlistToJsonNode")
     public abstract Ipa mapPolyglotIPAtoIpa(IPA ipa, UUID id, UUID storageCredentialId, String fileName);
+
+    @Named("mapPolyglotIPAtoIpaDevices")
+    public static List<String> mapPolyglotIPAtoIpaDevices(IPA ipa) {
+        List<String> res = null;
+        try {
+            res = Arrays.asList(ipa.devices());
+        } catch (Exception ignored) {
+        }
+        return res;
+    }
+
+    @Named("mapPolyglotIPAtoIpaTeamName")
+    public static String mapPolyglotIPAtoIpaTeamName(IPA ipa) {
+        String res = null;
+        try {
+            res = ipa.team_name();
+        } catch (Exception ignored) {
+        }
+        return res;
+    }
+
+    @Named("mapPolyglotIPAtoIpaExpiredDate")
+    public static Instant mapPolyglotIPAtoIpaExpiredDate(IPA ipa) {
+        Instant res = null;
+        try {
+            res = ipa.expired_date().toInstant();
+        } catch (Exception ignored) {
+        }
+        return res;
+    }
 }

@@ -4,6 +4,7 @@ import io.github.transfusion.deployapp.dto.internal.DeleteStorageCredentialEvent
 import io.github.transfusion.deployapp.dto.internal.TestMessage;
 import io.github.transfusion.deployapp.dto.response.S3CredentialDTO;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
@@ -31,9 +32,12 @@ public class IntegrationEventsListener {
         storageCredsUpdateService.createOrUpdateCredential(s3CredentialDTO);
     }
 
+    @Autowired
+    private StorageService storageService;
+
     @RabbitHandler
     public void receiveDeleteStorageCredentialEvent(DeleteStorageCredentialEvent event) {
-        storageCredsUpdateService.deleteCredential(event.getId());
+        storageService.deleteStorageCredential(event.getId());
     }
 
 }

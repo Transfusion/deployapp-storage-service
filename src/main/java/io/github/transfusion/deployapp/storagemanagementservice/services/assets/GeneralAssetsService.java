@@ -79,6 +79,7 @@ public class GeneralAssetsService {
         asset.setId(UUID.randomUUID());
         asset.setAppBinary(binary);
         asset.setType(PUBLIC_ICON.toString());
+        asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
         asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
 
         return asset;

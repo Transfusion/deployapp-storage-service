@@ -94,6 +94,21 @@ public class IPAAssetsService {
         if (!(data instanceof IPA))
             throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an IPA", appBinaryId));
 
+        if (!((IPA) data).mobileprovision_question()) {
+            logger.error("ipa with appbinary id {} doesn't contain a mobileprovision!", appBinaryId);
+            // save a placeholder
+            AppBinaryAsset asset = new AppBinaryAsset();
+//            asset.setFileName(mobileProvisionFile.getName());
+            asset.setId(UUID.randomUUID());
+            asset.setAppBinary(binary);
+            asset.setType(MOBILEPROVISION.toString());
+            asset.setDescription("Extraction FAILED.");
+            asset.setStatus(Constants.ASSET_STATUS.FAILED.toString());
+            asset = appBinaryAssetRepository.save(asset);
+            return asset;
+        }
+
+
         File mobileProvisionFile = new File(((IPA) data).mobileprovision_path());
         // upload back to the storage
         storageService.uploadPrivateAppBinaryObject(binary.getStorageCredential(),
@@ -112,6 +127,7 @@ public class IPAAssetsService {
         asset.setId(UUID.randomUUID());
         asset.setAppBinary(binary);
         asset.setType(MOBILEPROVISION.toString());
+        asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
         asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
 
         // and the actual mobileprovision info too for preview purposes...

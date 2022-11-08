@@ -8,6 +8,7 @@ import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
+import io.github.transfusion.deployapp.storagemanagementservice.db.converters.JsonStringListConverter;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Apk;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
@@ -21,6 +22,9 @@ import io.github.transfusion.deployapp.storagemanagementservice.services.assets.
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.graalvm.polyglot.Context;
+import org.jobrunr.scheduling.JobScheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
@@ -47,6 +51,8 @@ import java.util.UUID;
 
 @Service
 public class AppBinaryService {
+
+    Logger logger = LoggerFactory.getLogger(AppBinaryService.class);
 
     public static Map<String, Class<? extends AppBinary>> IDENTIFIER_TO_CLASS_NAME = new HashMap<>();
 
@@ -153,6 +159,26 @@ public class AppBinaryService {
         return binary;
 //        }
 //        return null;
+    }
+
+    @Autowired
+    private JobScheduler jobScheduler;
+
+    /**
+     * Fires off an asynchronous job that deletes all data related to a particular AppBinary.
+     *
+     * @param id {@link UUID} of the {@link AppBinary}
+     */
+    public void deleteAppBinaryById(UUID id) throws JsonProcessingException {
+        logger.info("deleting app binary by id {}", id);
+        AppBinary binary = ensureBinaryAvailable(id);
+        UUID storageCredentialId = binary.getStorageCredential();
+
+        // delete everything in our database
+        appBinaryRepository.delete(binary); // foreign keys are all ON DELETE CASCADE
+        logger.info("deleted app binary by id from our database {}", id);
+        jobScheduler.enqueue(() -> storageService.deleteAllAppBinaryData(storageCredentialId, Instant.EPOCH, id));
+        logger.info("scheduled storage deletion of app binary by id {}", id);
     }
 
     public AppBinary setDescription(UUID id, String description) {
