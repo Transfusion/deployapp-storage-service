@@ -9,7 +9,7 @@ data class AppBinaryAssetDTO(
 
     val type: String,
     val status: String?,
-    val fileName: String,
+    val fileName: String?,
     val description: String?,
 
     val value: JsonNode?,
