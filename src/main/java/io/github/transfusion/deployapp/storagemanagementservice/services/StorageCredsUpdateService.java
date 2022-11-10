@@ -2,7 +2,6 @@ package io.github.transfusion.deployapp.storagemanagementservice.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import io.github.transfusion.deployapp.dto.response.S3CredentialDTO;
 import io.github.transfusion.deployapp.dto.response.StorageCredentialDTO;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.StorageCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.StorageCredentialRepository;

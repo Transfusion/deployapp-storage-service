@@ -2,6 +2,7 @@ package io.github.transfusion.deployapp.storagemanagementservice.messaging;
 
 import io.github.transfusion.deployapp.dto.internal.DeleteStorageCredentialEvent;
 import io.github.transfusion.deployapp.dto.internal.TestMessage;
+import io.github.transfusion.deployapp.dto.response.FtpCredentialDTO;
 import io.github.transfusion.deployapp.dto.response.S3CredentialDTO;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
@@ -30,6 +31,11 @@ public class IntegrationEventsListener {
     @RabbitHandler
     public void receiveS3CredentialDTO(S3CredentialDTO s3CredentialDTO) {
         storageCredsUpdateService.createOrUpdateCredential(s3CredentialDTO);
+    }
+
+    @RabbitHandler
+    public void receiveFtpCredentialDTO(FtpCredentialDTO ftpCredentialDTO) {
+        storageCredsUpdateService.createOrUpdateCredential(ftpCredentialDTO);
     }
 
     @Autowired
