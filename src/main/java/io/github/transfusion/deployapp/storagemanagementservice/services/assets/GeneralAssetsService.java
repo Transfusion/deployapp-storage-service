@@ -63,7 +63,8 @@ public class GeneralAssetsService {
         Arrays.sort(icons, Comparator.<IPAIconHash>comparingLong(i -> i.dimensions()[0]).reversed());
 
         String iconName = icons[0].name();
-        File iconFile = new File(icons[0].uncrushed_file());
+        // noticed .uncrushed_file() being null and .file() being already uncrushed in the wild
+        File iconFile = new File(icons[0].uncrushed_file() != null ? icons[0].uncrushed_file() : icons[0].file());
         storageService.uploadPublicAppBinaryObject(binary.getStorageCredential(),
                 Instant.now(),
                 appBinaryId,
