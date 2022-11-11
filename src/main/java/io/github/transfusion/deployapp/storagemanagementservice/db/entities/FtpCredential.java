@@ -1,5 +1,7 @@
 package io.github.transfusion.deployapp.storagemanagementservice.db.entities;
 
+import io.github.transfusion.deployapp.storagemanagementservice.services.storage.*;
+
 import javax.persistence.*;
 
 @Entity
@@ -99,6 +101,26 @@ public class FtpCredential extends StorageCredential {
 
     public void setBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
+    }
+
+    @Override
+    public IUploader resolveUploader(IUploaderResolver resolver) {
+        return resolver.apply(this);
+    }
+
+    @Override
+    public IDownloader resolveDownloader(IDownloaderResolver resolver) {
+        return resolver.apply(this);
+    }
+
+    @Override
+    public IURLGetter resolveURLGetter(IURLGetterResolver resolver) {
+        return resolver.apply(this);
+    }
+
+    @Override
+    public IDeleter resolveDeleter(IDeleterResolver resolver) {
+        return resolver.apply(this);
     }
 
 }

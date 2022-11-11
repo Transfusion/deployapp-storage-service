@@ -1,6 +1,6 @@
 package io.github.transfusion.deployapp.storagemanagementservice.db.entities;
 
-import org.hibernate.annotations.GenericGenerator;
+import io.github.transfusion.deployapp.storagemanagementservice.services.storage.*;
 
 import javax.persistence.*;
 import java.time.Instant;
@@ -125,4 +125,13 @@ public abstract class StorageCredential {
     public void setStatus(String status) {
         this.status = status;
     }
+
+    // use the visitor pattern
+    public abstract IUploader resolveUploader(IUploaderResolver resolver);
+
+    public abstract IDownloader resolveDownloader(IDownloaderResolver resolver);
+
+    public abstract IURLGetter resolveURLGetter(IURLGetterResolver resolver);
+
+    public abstract IDeleter resolveDeleter(IDeleterResolver resolver);
 }

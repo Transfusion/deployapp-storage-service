@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.StorageCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
+import io.github.transfusion.deployapp.storagemanagementservice.services.storage.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jobrunr.scheduling.JobScheduler;
@@ -41,18 +42,30 @@ public class StorageService {
 
     Logger logger = LoggerFactory.getLogger(StorageService.class);
 
-    static String getS3PrivateFileKey(UUID appBinaryId, String name) {
+    public static String getS3PrivateFileKey(UUID appBinaryId, String name) {
         return String.format("%s%s/%s", S3Credential.PRIVATE_PREFIX, appBinaryId, name);
     }
 
-    static String getS3PublicFileKey(UUID appBinaryId, String name) {
+    public static String getS3PublicFileKey(UUID appBinaryId, String name) {
         return String.format("%s%s/%s", S3Credential.PUBLIC_PREFIX, appBinaryId, name);
     }
 
     @Autowired
     private StorageCredsUpdateService storageCredsUpdateService;
 
-    private S3Client getS3Client(S3Credential s3Creds) {
+    @Autowired
+    private IUploaderResolver uploaderResolver;
+
+    @Autowired
+    private IDownloaderResolver downloaderResolver;
+
+    @Autowired
+    private IURLGetterResolver urlGetterResolver;
+
+    @Autowired
+    private IDeleterResolver deleterResolver;
+
+    public static S3Client getS3Client(S3Credential s3Creds) {
         AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
                 s3Creds.getAccessKey(),
                 s3Creds.getSecretKey());
@@ -69,7 +82,7 @@ public class StorageService {
         return clientBuilder.build();
     }
 
-    private S3Presigner getS3Presigner(S3Credential s3Creds) {
+    public static S3Presigner getS3Presigner(S3Credential s3Creds) {
         AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
                 s3Creds.getAccessKey(),
                 s3Creds.getSecretKey());
@@ -86,16 +99,6 @@ public class StorageService {
         return preSignerBuilder.build();
     }
 
-    private PutObjectResponse uploadPrivateAppBinaryObject(S3Credential s3Creds, UUID appBinaryId, String name, File binary) {
-        final String key = StorageService.getS3PrivateFileKey(appBinaryId, name);
-        S3Client client = getS3Client(s3Creds);
-        PutObjectRequest objectRequest = PutObjectRequest.builder()
-                .bucket(s3Creds.getBucket())
-                .key(key)
-                .build();
-        return client.putObject(objectRequest, RequestBody.fromFile(binary));
-    }
-
     /**
      * Uploads a file associated with an AppBinary into private storage
      *
@@ -110,37 +113,8 @@ public class StorageService {
                                              Instant credentialCreatedOn,
                                              UUID id, String name, File object) throws JsonProcessingException {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
-        if (credential instanceof S3Credential) {
-            uploadPrivateAppBinaryObject((S3Credential) credential, id, name, object);
-        } else {
-            throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+        credential.resolveUploader(uploaderResolver).uploadPrivateAppBinaryObject(id, name, object);
 //            TODO: fill in other credential methods
-        }
-    }
-
-    /**
-     * Used by {@link #downloadPrivateAppBinaryObject(UUID, Instant, UUID, String)} if the credentials are of type S3Credential
-     * Streams the object into a temporary file and returns it
-     *
-     * @param s3Creds     {@link S3Credential}
-     * @param appBinaryId the {@link java.util.UUID} of the {@link io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary} it is associated with
-     * @param name        a unique string identifying this file
-     * @return a temporary {@link java.io.File}; deletion is left up to the user
-     * @throws IOException
-     */
-    private File downloadPrivateAppBinaryObject(S3Credential s3Creds, UUID appBinaryId, String name) throws IOException {
-        final String key = StorageService.getS3PrivateFileKey(appBinaryId, name);
-        S3Client client = getS3Client(s3Creds);
-        GetObjectRequest objectRequest = GetObjectRequest.builder()
-                .bucket(s3Creds.getBucket())
-                .key(key)
-                .build();
-
-        ResponseInputStream<GetObjectResponse> responseInputStream = client.getObject(objectRequest);
-        // create a temporary file...
-        File tempFile = File.createTempFile("temp", name);
-        FileUtils.copyInputStreamToFile(responseInputStream, tempFile);
-        return tempFile;
     }
 
     /**
@@ -153,48 +127,11 @@ public class StorageService {
      */
     public File downloadPrivateAppBinaryObject(UUID storageCredentialId, Instant credentialCreatedOn, UUID appBinaryId, String name) throws IOException {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
-        if (credential instanceof S3Credential) {
-            return downloadPrivateAppBinaryObject((S3Credential) credential, appBinaryId, name);
-        } else {
-            throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+        return credential.resolveDownloader(downloaderResolver).downloadPrivateAppBinaryObject(appBinaryId, name);
 //            TODO: fill in other credential methods
-        }
     }
 
     /* AppBinaryAsset-related methods go below */
-
-    /**
-     * S3-specific version of {@link #getURL(UUID, Instant, UUID, String, boolean)}
-     *
-     * @param s3Creds
-     * @param appBinaryId
-     * @param name
-     * @param _private
-     * @return
-     */
-    public URL getURL(S3Credential s3Creds, UUID appBinaryId, String name, boolean _private) {
-        S3Client client = getS3Client(s3Creds);
-        final String key = _private ? StorageService.getS3PrivateFileKey(appBinaryId, name) :
-                StorageService.getS3PublicFileKey(appBinaryId, name);
-        if (_private) {
-            GetObjectRequest objectRequest = GetObjectRequest.builder()
-                    .bucket(s3Creds.getBucket())
-                    .key(key)
-                    .build();
-
-            GetObjectPresignRequest request = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofMinutes(60))
-                    .getObjectRequest(objectRequest).build();
-
-            S3Presigner presigner = getS3Presigner(s3Creds);
-            PresignedGetObjectRequest presignedGetObjectRequest = presigner.presignGetObject(request);
-            URL result = presignedGetObjectRequest.url();
-            presigner.close();
-            return result;
-        } else {
-            return client.utilities().getUrl(bldr -> bldr.bucket(s3Creds.getBucket()).key(key));
-        }
-    }
 
     /**
      * @param storageCredentialId the {@link java.util.UUID} of the given {@link StorageCredential}
@@ -206,118 +143,39 @@ public class StorageService {
      */
     public URL getURL(UUID storageCredentialId, Instant credentialCreatedOn, UUID appBinaryId, String name, boolean _private) throws IOException {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
-
-        if (credential instanceof S3Credential) return getURL((S3Credential) credential, appBinaryId, name, _private);
-        throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+        if (_private) return credential.resolveURLGetter(urlGetterResolver).getPrivateURL(appBinaryId, name);
+        else return credential.resolveURLGetter(urlGetterResolver).getPublicURL(appBinaryId, name);
 //            TODO: fill in other credential methods
-    }
-
-    private PutObjectResponse uploadPublicAppBinaryObject(S3Credential s3Creds, UUID appBinaryId, String name, File binary) {
-        final String key = StorageService.getS3PublicFileKey(appBinaryId, name);
-        S3Client client = getS3Client(s3Creds);
-        PutObjectRequest objectRequest = PutObjectRequest.builder()
-                .bucket(s3Creds.getBucket())
-                .key(key)
-                .build();
-        return client.putObject(objectRequest, RequestBody.fromFile(binary));
     }
 
     public void uploadPublicAppBinaryObject(UUID storageCredentialId,
                                             Instant credentialCreatedOn,
                                             UUID id, String name, File object) throws JsonProcessingException {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
-        if (credential instanceof S3Credential) {
-            uploadPublicAppBinaryObject((S3Credential) credential, id, name, object);
-        } else {
-            throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+        credential.resolveUploader(uploaderResolver).uploadPublicAppBinaryObject(id, name, object);
 //            TODO: fill in other credential methods
-        }
     }
 
     /* deletion / cleanup methods go below here */
 
-    private void performDelete(S3Client s3Client, S3Credential s3Creds, ListObjectsResponse response) {
-        while (true) {
-            if (response.contents() == null) {
-                break;
-            }
-            for (S3Object objectSummary : response.contents()) {
-                s3Client.deleteObject(DeleteObjectRequest.builder().bucket(s3Creds.getBucket()).key(objectSummary.key()).build());
-            }
-            if (response.isTruncated()) {
-                response = s3Client.listObjects(ListObjectsRequest.builder().marker(response.nextMarker()).build());
-            } else {
-                break;
-            }
-        }
-    }
-
-    public void deleteAllAppBinaryData(S3Credential s3Creds, UUID id) {
-        S3Client s3Client = getS3Client(s3Creds);
-
-        // delete private prefix first
-        ListObjectsRequest listObjectsRequest = ListObjectsRequest.builder()
-                .bucket(s3Creds.getBucket())
-                .prefix(String.format("%s%s/", S3Credential.PRIVATE_PREFIX, id)).build();
-
-        ListObjectsResponse response = s3Client.listObjects(listObjectsRequest);
-        performDelete(s3Client, s3Creds, response);
-
-        // then public prefix
-        listObjectsRequest = ListObjectsRequest.builder()
-                .bucket(s3Creds.getBucket())
-                .prefix(String.format("%s%s/", S3Credential.PUBLIC_PREFIX, id)).build();
-
-        response = s3Client.listObjects(listObjectsRequest);
-        performDelete(s3Client, s3Creds, response);
-    }
-
     public void deleteAllAppBinaryData(UUID storageCredentialId, Instant credentialCreatedOn, UUID id) throws JsonProcessingException {
         logger.info("storageservice delete started with credential id {}", storageCredentialId);
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
-        if (credential instanceof S3Credential) {
-            deleteAllAppBinaryData((S3Credential) credential, id);
-        } else {
-            throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+        credential.resolveDeleter(deleterResolver).deleteAllAppBinaryData(id);
 //            TODO: fill in other credential methods
-        }
         logger.info("storageservice delete ended with credential id {}", storageCredentialId);
     }
 
     @Autowired
     private AppBinaryRepository appBinaryRepository;
 
-    /**
-     * Public because JobRunr needs to access it
-     *
-     * @param s3Creds {@link S3Credential}
-     */
-    public void deleteStorageCredential(S3Credential s3Creds) {
-        logger.info("nuking s3 storage credential with id {}", s3Creds.getId());
-        S3Client s3Client = getS3Client(s3Creds);
-
-        // delete private prefix first
-        ListObjectsRequest listObjectsRequest = ListObjectsRequest.builder()
-                .bucket(s3Creds.getBucket())
-                .prefix(S3Credential.PRIVATE_PREFIX).build();
-
-        ListObjectsResponse response = s3Client.listObjects(listObjectsRequest);
-        performDelete(s3Client, s3Creds, response);
-
-        // then public prefix
-        listObjectsRequest = ListObjectsRequest.builder()
-                .bucket(s3Creds.getBucket())
-                .prefix(S3Credential.PUBLIC_PREFIX).build();
-
-        response = s3Client.listObjects(listObjectsRequest);
-        performDelete(s3Client, s3Creds, response);
-
-        storageCredsUpdateService.deleteCredential(s3Creds.getId());
-        logger.info("done nuking s3 storage credential with id {}", s3Creds.getId());
-    }
-
     @Autowired
     private JobScheduler jobScheduler;
+
+    public void deleteStorageCredential(StorageCredential credential) {
+        credential.resolveDeleter(deleterResolver).deleteStorageCredential();
+        storageCredsUpdateService.deleteCredential(credential.getId());
+    }
 
     /**
      * Nukes everything DeployApp-related stored using the given credential.
@@ -337,12 +195,7 @@ public class StorageService {
         }
 
         logger.info("storage credential {} successfully obtained", storageCredentialId);
-
-        if (credential instanceof S3Credential) {
-            jobScheduler.enqueue(() -> deleteStorageCredential((S3Credential) credential));
-        } else {
-            throw new NotImplementedException(String.format("%s is of unknown storage credential type", storageCredentialId));
+        jobScheduler.enqueue(() -> deleteStorageCredential(credential));
 //            TODO: fill in other credential methods
-        }
     }
 }

@@ -1,6 +1,8 @@
 package io.github.transfusion.deployapp.storagemanagementservice.db.entities;
 
 
+import io.github.transfusion.deployapp.storagemanagementservice.services.storage.*;
+
 import javax.persistence.*;
 import java.util.UUID;
 
@@ -78,5 +80,25 @@ public class S3Credential extends StorageCredential {
 
     public void setAwsRegion(String awsRegion) {
         this.awsRegion = awsRegion;
+    }
+
+    @Override
+    public IUploader resolveUploader(IUploaderResolver resolver) {
+        return resolver.apply(this);
+    }
+
+    @Override
+    public IDownloader resolveDownloader(IDownloaderResolver resolver) {
+        return resolver.apply(this);
+    }
+
+    @Override
+    public IURLGetter resolveURLGetter(IURLGetterResolver resolver) {
+        return resolver.apply(this);
+    }
+
+    @Override
+    public IDeleter resolveDeleter(IDeleterResolver resolver) {
+        return resolver.apply(this);
     }
 }
