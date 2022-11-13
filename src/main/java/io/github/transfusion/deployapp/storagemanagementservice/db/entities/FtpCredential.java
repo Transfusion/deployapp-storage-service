@@ -5,21 +5,21 @@ import io.github.transfusion.deployapp.storagemanagementservice.services.storage
 import javax.persistence.*;
 
 @Entity
-@PrimaryKeyJoinColumn(name = "id")
 @Table(name = "ftp_credentials")
+@PrimaryKeyJoinColumn(name = "id")
 public class FtpCredential extends StorageCredential {
     public static final String IDENTIFIER = "FTP";
 
     public static String PUBLIC_PREFIX = "public/";
-//    public static String PRIVATE_PREFIX = "private/";
+    public static String PRIVATE_PREFIX = "private/";
 //    @Id
 //    @Column(name = "id", nullable = false)
 //    private UUID id;
 
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id", nullable = false)
-    private StorageCredential storageCredentials;
+//    @MapsId
+//    @OneToOne(fetch = FetchType.LAZY, optional = false)
+//    @JoinColumn(name = "id", nullable = false)
+//    private StorageCredential storageCredentials;
 
     @Column(name = "server", nullable = false)
     private String server;
@@ -47,13 +47,13 @@ public class FtpCredential extends StorageCredential {
 //        this.id = id;
 //    }
 
-    public StorageCredential getStorageCredentials() {
-        return storageCredentials;
-    }
-
-    public void setStorageCredentials(StorageCredential storageCredentials) {
-        this.storageCredentials = storageCredentials;
-    }
+//    public StorageCredential getStorageCredentials() {
+//        return storageCredentials;
+//    }
+//
+//    public void setStorageCredentials(StorageCredential storageCredentials) {
+//        this.storageCredentials = storageCredentials;
+//    }
 
     public String getServer() {
         return server;

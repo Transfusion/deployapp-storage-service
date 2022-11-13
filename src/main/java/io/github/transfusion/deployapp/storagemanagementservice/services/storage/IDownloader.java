@@ -7,5 +7,5 @@ import java.io.IOException;
 import java.util.UUID;
 
 public interface IDownloader {
-    File downloadPrivateAppBinaryObject(/*S3Credential s3Creds,*/ UUID appBinaryId, String name) throws IOException;
+    File downloadPrivateAppBinaryObject(/*S3Credential s3Creds,*/ UUID appBinaryId, String name) throws Exception;
 }

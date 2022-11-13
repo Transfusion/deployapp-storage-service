@@ -14,6 +14,6 @@ public class DownloaderResolver implements IDownloaderResolver {
 
     @Override
     public IDownloader apply(FtpCredential ftpCredential) {
-        return null;
+        return new FtpDownloader(ftpCredential);
     }
 }

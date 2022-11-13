@@ -65,7 +65,7 @@ public class IPAAssetsService {
     @Autowired
     private AppBinaryJobService appBinaryJobService;
 
-    public AppBinaryAsset generateIPAMobileProvision(UUID jobId, UUID appBinaryId) throws IOException {
+    public AppBinaryAsset generateIPAMobileProvision(UUID jobId, UUID appBinaryId) throws Exception {
         appBinaryJobService.createJob(jobId, appBinaryId, "Generating .mobileprovision", "In Progress");
         AppBinaryAsset asset = generateIPAMobileProvision(appBinaryId);
         appBinaryJobService.deleteJobSilent(jobId);
@@ -78,7 +78,7 @@ public class IPAAssetsService {
      */
     // TODO: during testing, mock appBinaryRepository, the StorageService that returns a file, and catch the exceptions
     @Transactional
-    public AppBinaryAsset generateIPAMobileProvision(UUID appBinaryId) throws IOException {
+    public AppBinaryAsset generateIPAMobileProvision(UUID appBinaryId) throws Exception {
         Optional<AppBinary> _binary = appBinaryRepository.findById(appBinaryId);
         if (_binary.isEmpty()) throw new IllegalArgumentException(String.format("%s doesn't exist", appBinaryId));
         AppBinary binary = _binary.get();

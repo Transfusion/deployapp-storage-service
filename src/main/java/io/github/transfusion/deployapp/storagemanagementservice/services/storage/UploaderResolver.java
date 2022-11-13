@@ -18,6 +18,6 @@ public class UploaderResolver implements IUploaderResolver {
 
     @Override
     public IUploader apply(FtpCredential credential) {
-        return null;
+        return new FtpUploader(credential);
     }
 }

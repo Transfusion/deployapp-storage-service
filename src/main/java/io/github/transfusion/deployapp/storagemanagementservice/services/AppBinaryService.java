@@ -91,7 +91,7 @@ public class AppBinaryService {
     @Autowired
     private IpaRepository ipaRepository;
 
-    private Ipa storeIPA(UUID storageCredentialId, Instant credentialCreatedOn, File binary, IPA ipa) throws JsonProcessingException {
+    private Ipa storeIPA(UUID storageCredentialId, Instant credentialCreatedOn, File binary, IPA ipa) throws Exception {
         UUID id = UUID.randomUUID();
 //        final String fileName = String.format("%s-%s-%s.ipa", ipa.bundle_id(), ipa.build_version(), ipa.release_version());
         // attempt to upload first
@@ -108,7 +108,7 @@ public class AppBinaryService {
      * @param credentialCreatedOn ISO8601 timestamp
      * @param binary              the file itself
      */
-    public AppBinary detectAndStoreOwnBinary(UUID storageCredentialId, Instant credentialCreatedOn, File binary) throws JsonProcessingException {
+    public AppBinary detectAndStoreOwnBinary(UUID storageCredentialId, Instant credentialCreatedOn, File binary) throws Exception {
         AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
         AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
         if (data instanceof IPA) {

@@ -13,6 +13,6 @@ public class DeleterResolver implements IDeleterResolver {
 
     @Override
     public IDeleter apply(FtpCredential ftpCredential) {
-        return null;
+        return new FtpDeleter(ftpCredential);
     }
 }

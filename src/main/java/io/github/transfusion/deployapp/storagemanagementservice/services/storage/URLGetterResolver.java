@@ -14,6 +14,6 @@ public class URLGetterResolver implements IURLGetterResolver {
 
     @Override
     public IURLGetter apply(FtpCredential credential) {
-        return null;
+        return new FtpURLGetter(credential);
     }
 }

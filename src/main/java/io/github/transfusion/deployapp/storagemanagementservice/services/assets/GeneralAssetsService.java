@@ -45,7 +45,7 @@ public class GeneralAssetsService {
     @Autowired
     private StorageService storageService;
 
-    private AppBinaryAsset generateIPAPublicIcon(Ipa binary) throws IOException {
+    private AppBinaryAsset generateIPAPublicIcon(Ipa binary) throws Exception {
         UUID appBinaryId = binary.getId();
         File tempFile = storageService.downloadPrivateAppBinaryObject(binary.getStorageCredential(), Instant.now(), appBinaryId, "binary.ipa");
 
@@ -86,7 +86,7 @@ public class GeneralAssetsService {
         return asset;
     }
 
-    private AppBinaryAsset generatePublicIcon(UUID appBinaryId) throws IOException {
+    private AppBinaryAsset generatePublicIcon(UUID appBinaryId) throws Exception {
         Optional<AppBinary> _binary = appBinaryRepository.findById(appBinaryId);
         if (_binary.isEmpty()) throw new IllegalArgumentException(String.format("%s doesn't exist", appBinaryId));
 
@@ -98,7 +98,7 @@ public class GeneralAssetsService {
         throw new NotImplementedException(String.format("Generating public app icon of type %s is not implemented", binary.getClass().getName()));
     }
 
-    public AppBinaryAsset generatePublicIcon(UUID jobId, UUID appBinaryId) throws IOException {
+    public AppBinaryAsset generatePublicIcon(UUID jobId, UUID appBinaryId) throws Exception {
         appBinaryJobService.createJob(jobId, appBinaryId, "Generating public icon", "In Progress");
         AppBinaryAsset asset = generatePublicIcon(appBinaryId);
         appBinaryJobService.deleteJobSilent(jobId);

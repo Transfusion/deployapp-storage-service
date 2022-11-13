@@ -1,6 +1,7 @@
 package io.github.transfusion.deployapp.storagemanagementservice.db.entities;
 
 import io.github.transfusion.deployapp.storagemanagementservice.services.storage.*;
+import net.minidev.json.annotate.JsonIgnore;
 
 import javax.persistence.*;
 import java.time.Instant;
@@ -127,11 +128,15 @@ public abstract class StorageCredential {
     }
 
     // use the visitor pattern
+    @JsonIgnore
     public abstract IUploader resolveUploader(IUploaderResolver resolver);
 
+    @JsonIgnore
     public abstract IDownloader resolveDownloader(IDownloaderResolver resolver);
 
+    @JsonIgnore
     public abstract IURLGetter resolveURLGetter(IURLGetterResolver resolver);
 
+    @JsonIgnore
     public abstract IDeleter resolveDeleter(IDeleterResolver resolver);
 }

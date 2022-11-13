@@ -86,7 +86,7 @@ public class AppController {
             path = "/binary",
             method = RequestMethod.POST,
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<AppBinaryDTO> detectAndStoreBinary(@ModelAttribute UploadAppBinaryRequest request) throws IOException {
+    public ResponseEntity<AppBinaryDTO> detectAndStoreBinary(@ModelAttribute UploadAppBinaryRequest request) throws Exception {
 //        https://www.baeldung.com/spring-multipartfile-to-file
         File tempFile = File.createTempFile("binary", request.getBinary().getOriginalFilename());
         request.getBinary().transferTo(tempFile);

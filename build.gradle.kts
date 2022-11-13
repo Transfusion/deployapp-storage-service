@@ -68,7 +68,9 @@ dependencies {
 
     implementation("commons-io:commons-io:2.11.0")
     // https://mvnrepository.com/artifact/org.apache.commons/commons-text
-    implementation(group = "org.apache.commons", name = "commons-text", version = "1.10.0");
+    implementation(group = "org.apache.commons", name = "commons-text", version = "1.10.0")
+    // https://mvnrepository.com/artifact/commons-net/commons-net
+    implementation(group = "commons-net", name = "commons-net", version = "3.8.0")
 
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") // already includes mockito

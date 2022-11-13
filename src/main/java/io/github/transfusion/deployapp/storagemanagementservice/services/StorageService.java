@@ -1,12 +1,15 @@
 package io.github.transfusion.deployapp.storagemanagementservice.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.StorageCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.services.storage.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPClient;
 import org.jobrunr.scheduling.JobScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +27,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import javax.naming.AuthenticationException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -32,6 +36,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+import static io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpCredential.PRIVATE_PREFIX;
+import static io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpCredential.PUBLIC_PREFIX;
 import static io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential.CUSTOM_AWS_REGION;
 
 /**
@@ -49,6 +55,42 @@ public class StorageService {
     public static String getS3PublicFileKey(UUID appBinaryId, String name) {
         return String.format("%s%s/%s", S3Credential.PUBLIC_PREFIX, appBinaryId, name);
     }
+
+    public static String getFtpPrivatePrefixDirectory(String directory) {
+        return String.format("%s/%s", directory, PRIVATE_PREFIX);
+    }
+
+    public static String getFtpPrivateAppBinaryDirectory(String directory, UUID appBinaryId) {
+        return String.format("%s/%s%s", directory, PRIVATE_PREFIX, appBinaryId);
+    }
+
+    public static String getFtpPrivateFileKey(String directory, UUID appBinaryId, String name) {
+        return String.format("%s/%s%s/%s", directory, PRIVATE_PREFIX, appBinaryId, name);
+    }
+
+    public static String getFtpPublicPrefixDirectory(String directory) {
+        return String.format("%s/%s", directory, PUBLIC_PREFIX);
+    }
+
+    public static String getFtpPublicAppBinaryDirectory(String directory, UUID appBinaryId) {
+        return String.format("%s/%s%s", directory, PUBLIC_PREFIX, appBinaryId);
+    }
+
+    public static String getFtpPublicFileKey(String directory, UUID appBinaryId, String name) {
+        return String.format("%s/%s%s/%s", directory, PUBLIC_PREFIX, appBinaryId, name);
+    }
+
+    public static FTPClient getFTPClient(FtpCredential ftpCreds) throws IOException, AuthenticationException {
+        FTPClient client = new FTPClient();
+        client.connect(ftpCreds.getServer(), ftpCreds.getPort());
+        if (!client.login(ftpCreds.getUsername(), ftpCreds.getPassword()))
+            throw new AuthenticationException(String.format("Login failed to server %s port %d", ftpCreds.getServer(), ftpCreds.getPort()));
+        client.makeDirectory(getFtpPublicPrefixDirectory(ftpCreds.getDirectory()));
+        client.makeDirectory(getFtpPrivatePrefixDirectory(ftpCreds.getDirectory()));
+        client.setFileType(FTP.BINARY_FILE_TYPE);
+        return client;
+    }
+
 
     @Autowired
     private StorageCredsUpdateService storageCredsUpdateService;
@@ -111,7 +153,7 @@ public class StorageService {
      */
     public void uploadPrivateAppBinaryObject(UUID storageCredentialId,
                                              Instant credentialCreatedOn,
-                                             UUID id, String name, File object) throws JsonProcessingException {
+                                             UUID id, String name, File object) throws Exception {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
         credential.resolveUploader(uploaderResolver).uploadPrivateAppBinaryObject(id, name, object);
 //            TODO: fill in other credential methods
@@ -125,7 +167,7 @@ public class StorageService {
      * @param name                a unique string identifying this file
      * @return a temporary {@link java.io.File}; deletion is left up to the user
      */
-    public File downloadPrivateAppBinaryObject(UUID storageCredentialId, Instant credentialCreatedOn, UUID appBinaryId, String name) throws IOException {
+    public File downloadPrivateAppBinaryObject(UUID storageCredentialId, Instant credentialCreatedOn, UUID appBinaryId, String name) throws Exception {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
         return credential.resolveDownloader(downloaderResolver).downloadPrivateAppBinaryObject(appBinaryId, name);
 //            TODO: fill in other credential methods
@@ -150,7 +192,7 @@ public class StorageService {
 
     public void uploadPublicAppBinaryObject(UUID storageCredentialId,
                                             Instant credentialCreatedOn,
-                                            UUID id, String name, File object) throws JsonProcessingException {
+                                            UUID id, String name, File object) throws Exception {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
         credential.resolveUploader(uploaderResolver).uploadPublicAppBinaryObject(id, name, object);
 //            TODO: fill in other credential methods
@@ -158,7 +200,7 @@ public class StorageService {
 
     /* deletion / cleanup methods go below here */
 
-    public void deleteAllAppBinaryData(UUID storageCredentialId, Instant credentialCreatedOn, UUID id) throws JsonProcessingException {
+    public void deleteAllAppBinaryData(UUID storageCredentialId, Instant credentialCreatedOn, UUID id) throws Exception {
         logger.info("storageservice delete started with credential id {}", storageCredentialId);
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
         credential.resolveDeleter(deleterResolver).deleteAllAppBinaryData(id);
@@ -172,7 +214,7 @@ public class StorageService {
     @Autowired
     private JobScheduler jobScheduler;
 
-    public void deleteStorageCredential(StorageCredential credential) {
+    public void deleteStorageCredential(StorageCredential credential) throws Exception {
         credential.resolveDeleter(deleterResolver).deleteStorageCredential();
         storageCredsUpdateService.deleteCredential(credential.getId());
     }
