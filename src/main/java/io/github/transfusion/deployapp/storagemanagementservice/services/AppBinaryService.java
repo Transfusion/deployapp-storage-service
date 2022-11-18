@@ -8,10 +8,12 @@ import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
-import io.github.transfusion.deployapp.storagemanagementservice.db.converters.JsonStringListConverter;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Apk;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.ApkCert;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
+import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.ApkCertRepository;
+import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.ApkRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.IpaRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
@@ -43,10 +45,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -103,25 +103,54 @@ public class AppBinaryService {
         return appBinaryRecord;
     }
 
+    @Autowired
+    private ApkRepository apkRepository;
+
+    @Autowired
+    private ApkCertRepository apkCertRepository;
+
+    private Apk storeAPK(UUID storageCredentialId, Instant credentialCreatedOn, File binary, APK apk) throws Exception {
+        UUID id = UUID.randomUUID();
+        storageService.uploadPrivateAppBinaryObject(storageCredentialId, credentialCreatedOn, id,
+                "binary.apk", binary);
+        Apk appBinaryRecord = appDetailsMapper.mapPolyglotAPKtoApk(apk, id, storageCredentialId, binary.getName());
+        return appBinaryRecord;
+    }
+
     /**
      * @param storageCredentialId UUID in storage_credentials
      * @param credentialCreatedOn ISO8601 timestamp
      * @param binary              the file itself
      */
     public AppBinary detectAndStoreOwnBinary(UUID storageCredentialId, Instant credentialCreatedOn, File binary) throws Exception {
+        SecurityContext context = SecurityContextHolder.getContext();
+        Authentication authentication = context.getAuthentication();
+        UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
+
         AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
         AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
         if (data instanceof IPA) {
             // TODO: anonymous detect and store
-            SecurityContext context = SecurityContextHolder.getContext();
-            Authentication authentication = context.getAuthentication();
-            UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
             Ipa res = storeIPA(storageCredentialId, credentialCreatedOn, binary, (IPA) data);
             res.setUserId(userId);
             ((IPA) data).clear();
             return ipaRepository.save(res);
         } else if (data instanceof APK) {
-            return null;
+            // TODO: anonymous detect and store
+            Apk res = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
+            res.setUserId(userId);
+            res = apkRepository.save(res);
+
+            for (Iterator<ApkCert> it = Arrays.stream(((APK) data).certificates())
+                    .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
+                    .iterator(); it.hasNext(); ) {
+                ApkCert cert = it.next();
+                cert.setId(UUID.randomUUID());
+                cert.setAppBinary(res);
+                apkCertRepository.save(cert);
+            }
+
+            return res;
         } else {
             throw new IllegalArgumentException("Only IPA and APK files supported for now.");
         }

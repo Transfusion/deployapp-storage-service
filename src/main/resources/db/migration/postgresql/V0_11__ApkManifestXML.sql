@@ -1,0 +1,1 @@
+ALTER TABLE "public"."apk" ADD COLUMN "manifest_xml" text NOT NULL;
