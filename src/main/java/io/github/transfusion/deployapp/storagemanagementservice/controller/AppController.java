@@ -12,13 +12,11 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryTypeSpecification;
-import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryAssetMapper;
-import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryJobMapper;
-import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
-import io.github.transfusion.deployapp.storagemanagementservice.mappers.MobileProvisionMapper;
+import io.github.transfusion.deployapp.storagemanagementservice.mappers.*;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.assets.APKAssetsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.IPAAssetsService;
@@ -180,6 +178,9 @@ public class AppController {
     private IPAAssetsService ipaAssetsService;
 
     @Autowired
+    private APKAssetsService apkAssetsService;
+
+    @Autowired
     private JobScheduler jobScheduler;
 
     @Autowired
@@ -221,6 +222,14 @@ public class AppController {
     @GetMapping("/binary/{id}/mobileprovisions")
     public ResponseEntity<List<IpaMobileprovisionDTO>> getIpaMobileprovisions(@PathVariable("id") UUID id) {
         return new ResponseEntity<>(ipaAssetsService.getIpaMobileprovisions(id).stream().map(mobileProvisionMapper::toDTO).collect(Collectors.toList()), HttpStatus.OK);
+    }
+
+    @Autowired
+    private ApkCertMapper apkCertMapper;
+
+    @GetMapping("/binary/{id}/apkcerts")
+    public ResponseEntity<List<ApkCertDTO>> getApkCerts(@PathVariable("id") UUID id) {
+        return new ResponseEntity<>(apkAssetsService.getApkCerts(id).stream().map(apkCertMapper::toDTO).collect(Collectors.toList()), HttpStatus.OK);
     }
 
     @Autowired

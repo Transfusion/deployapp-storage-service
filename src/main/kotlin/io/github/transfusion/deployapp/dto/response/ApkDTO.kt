@@ -7,7 +7,18 @@ import java.util.*
 
 data class ApkDTO(
     // APK-specific fields
-    // TODO
+    val minSdkVersion: String,
+    val minOsVersion: String,
+    val targetSdkVersion: String,
+    val wear: Boolean,
+    val tv: Boolean,
+    val automotive: Boolean,
+    val deviceType: String,
+    val useFeatures: List<String>?,
+    val usePermissions: List<String>?,
+    val deepLinks: List<String>?,
+    val schemes: List<String>?,
+    val manifestXml: String,
 
     // AppBinary fields
     override val id: UUID,
