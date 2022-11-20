@@ -13,6 +13,7 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.specification
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryTypeSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.*;
+import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryDownloadsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
@@ -38,9 +39,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -148,8 +149,41 @@ public class AppController {
 
     @GetMapping(path = "/binary/{id}/itmsplist", produces = {MediaType.TEXT_XML_VALUE})
     public ResponseEntity<String> getITMSPlist(@PathVariable("id") UUID id) throws IOException {
+        AppBinary binary = appBinaryService.getAppBinaryById(id);
+        if (!binary.getAvailable())
+            throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
+        appBinaryService.updateLastInstallDate(id);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(appBinaryService.getITMSPlist(id));
     }
+
+    @Autowired
+    private AppBinaryDownloadsService appBinaryDownloadsService;
+
+    @GetMapping(path = "/binary/{id}/download")
+    public ResponseEntity<Void> download(@PathVariable("id") UUID id, @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
+                                         HttpServletRequest request) throws IOException, URISyntaxException {
+        String remoteAddr = request.getRemoteAddr();
+        AppBinary binary = appBinaryService.getAppBinaryById(id);
+        if (!binary.getAvailable())
+            throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(appBinaryService.getURL(id).toURI());
+        appBinaryDownloadsService.recordDownload(userAgent, remoteAddr, id);
+        appBinaryService.updateLastInstallDate(id);
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+
+    @Autowired
+    private AppBinaryDownloadMapper appBinaryDownloadMapper;
+
+    @GetMapping("/binary/{id}/downloads")
+    @Operation(summary = "Gets download statistics of a particular AppBinary")
+    @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
+    public Page<AppBinaryDownloadDTO> getDownloads(@PathVariable("id") UUID id, Pageable page) {
+        return appBinaryDownloadsService.getDownloadsPaginated(id, page).map(appBinaryDownloadMapper::toDTO);
+    }
+
 
     @PutMapping("/binary/{id}/description")
     @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")

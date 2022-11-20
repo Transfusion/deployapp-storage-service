@@ -16,11 +16,12 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.ApkRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.IpaRepository;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.graalvm.polyglot.Context;
@@ -46,7 +47,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -76,7 +76,12 @@ public class AppBinaryService {
     @Autowired
     private StorageService storageService;
 
-    private AppBinary ensureBinaryAvailable(UUID id) {
+    /**
+     * @param id {@link UUID}
+     * @return {@link AppBinary}
+     * @throws {@link ResourceNotFoundException} if the id doesn't exist.
+     */
+    public AppBinary ensureBinaryAvailable(UUID id) {
         Optional<AppBinary> _binary = appBinaryRepository.findById(id);
         if (_binary.isEmpty()) throw new ResourceNotFoundException("AppBinary", "id", id);
         return _binary.get();
@@ -239,8 +244,8 @@ public class AppBinaryService {
     public String getITMSPlist(UUID id) throws IOException {
         AppBinary binary = ensureBinaryAvailable(id);
         if (!(binary instanceof Ipa)) throw new IllegalArgumentException(String.format("%s is not an IPA.", id));
-        if (!binary.getAvailable())
-            throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
+//        if (!binary.getAvailable())
+//            throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
         // load itms plist template from the ResourceLoader
         Resource resource = resourceLoader.getResource("classpath:manifest-template.txt");
         String template = AppBinaryUtils.resourceAsString(resource);
@@ -261,5 +266,25 @@ public class AppBinaryService {
         String g = sub.replace(template);
         System.out.println(g);
         return g;
+    }
+
+    public URL getURL(UUID id) throws IOException {
+        AppBinary binary = ensureBinaryAvailable(id);
+
+        String name;
+        if (binary instanceof Ipa) {
+            name = "binary.ipa";
+        } else if (binary instanceof Apk) {
+            name = "binary.apk";
+        } else throw new NotImplementedException(String.format("AppBinary with ID %s is of unknown type.", id));
+
+        return storageService.getURL(binary.getStorageCredential(), Instant.EPOCH,
+                id, name, true);
+    }
+
+    public void updateLastInstallDate(UUID id) {
+        AppBinary binary = ensureBinaryAvailable(id);
+        binary.setLastInstallDate(Instant.now());
+        appBinaryRepository.save(binary);
     }
 }

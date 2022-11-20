@@ -12,17 +12,16 @@ import java.util.UUID;
 @Table(name = "app_binary_downloads")
 public class AppBinaryDownload {
     @Id
-    @Column(name = "app_binary_id", nullable = false)
+    @Column(name = "id", nullable = false)
     private UUID id;
 
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "app_binary_id", nullable = false)
     private AppBinary appBinary;
 
-    @Column(name = "\"timestamp\"", nullable = false)
-    private Instant timestamp;
+    @Column(name = "ts", nullable = false)
+    private Instant ts;
 
     @Column(name = "ip", nullable = false)
     @Type(type = "org.hibernate.type.TextType")
@@ -32,10 +31,10 @@ public class AppBinaryDownload {
     @Type(type = "org.hibernate.type.TextType")
     private String ua;
 
-    @Column(name = "os", nullable = false, length = 10)
+    @Column(name = "os", length = 50)
     private String os;
 
-    @Column(name = "version", nullable = false, length = 10)
+    @Column(name = "version", length = 50)
     private String version;
 
     public UUID getId() {
@@ -54,12 +53,12 @@ public class AppBinaryDownload {
         this.appBinary = appBinary;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public Instant getTs() {
+        return ts;
     }
 
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp;
+    public void setTs(Instant ts) {
+        this.ts = ts;
     }
 
     public String getIp() {

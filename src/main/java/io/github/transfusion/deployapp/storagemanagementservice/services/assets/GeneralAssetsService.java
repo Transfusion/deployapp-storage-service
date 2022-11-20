@@ -1,10 +1,9 @@
 package io.github.transfusion.deployapp.storagemanagementservice.services.assets;
 
 import io.github.transfusion.app_info_java_graalvm.AbstractPolyglotAdapter;
-import io.github.transfusion.app_info_java_graalvm.AppInfo.AppInfo;
-import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
-import io.github.transfusion.app_info_java_graalvm.AppInfo.IPAIconHash;
+import io.github.transfusion.app_info_java_graalvm.AppInfo.*;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Apk;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryAsset;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
@@ -86,6 +85,47 @@ public class GeneralAssetsService {
         return asset;
     }
 
+    private AppBinaryAsset generateAPKPublicIcon(Apk binary) throws Exception {
+        UUID appBinaryId = binary.getId();
+        File tempFile = storageService.downloadPrivateAppBinaryObject(binary.getStorageCredential(), Instant.now(), appBinaryId, "binary.apk");
+
+        // now use app-info-graalvm to get our desired asset...
+        AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
+        AbstractPolyglotAdapter data = appInfo.parse_(tempFile.getAbsolutePath());
+        if (!(data instanceof APK))
+            throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an APK", appBinaryId));
+
+        AndroidIconHash[] icons = ((APK) data).icons();
+        if (icons == null || icons.length == 0)
+            throw new RuntimeException(String.format("The stored AppBinary with ID %s has no icons", appBinaryId));
+
+        // find the largest icon ( AndroidIconHash.dimensions() sometimes returns null in the wild )
+        Arrays.sort(icons, Comparator.<AndroidIconHash>comparingLong(i -> i.dimensions() == null ? 0 : i.dimensions()[0]).reversed());
+
+        String iconName = icons[0].name();
+        // noticed .uncrushed_file() being null and .file() being already uncrushed in the wild
+        File iconFile = new File(icons[0].file());
+        storageService.uploadPublicAppBinaryObject(binary.getStorageCredential(),
+                Instant.now(),
+                appBinaryId,
+                iconName, iconFile);
+
+        // record in DB
+
+        // delete all existing PUBLIC_ICONs
+        appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, PUBLIC_ICON.toString());
+
+        AppBinaryAsset asset = new AppBinaryAsset();
+        asset.setFileName(iconName);
+        asset.setId(UUID.randomUUID());
+        asset.setAppBinary(binary);
+        asset.setType(PUBLIC_ICON.toString());
+        asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
+        asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
+
+        return asset;
+    }
+
     private AppBinaryAsset generatePublicIcon(UUID appBinaryId) throws Exception {
         Optional<AppBinary> _binary = appBinaryRepository.findById(appBinaryId);
         if (_binary.isEmpty()) throw new IllegalArgumentException(String.format("%s doesn't exist", appBinaryId));
@@ -93,6 +133,8 @@ public class GeneralAssetsService {
         AppBinary binary = _binary.get();
         if (binary instanceof Ipa) {
             return generateIPAPublicIcon((Ipa) binary);
+        } else if (binary instanceof Apk) {
+            return generateAPKPublicIcon((Apk) binary);
         }
 
         throw new NotImplementedException(String.format("Generating public app icon of type %s is not implemented", binary.getClass().getName()));
