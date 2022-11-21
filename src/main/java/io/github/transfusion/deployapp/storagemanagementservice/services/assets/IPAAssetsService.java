@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
-import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -66,7 +65,6 @@ public class IPAAssetsService {
     private AppBinaryJobService appBinaryJobService;
 
     public AppBinaryAsset generateIPAMobileProvision(UUID jobId, UUID appBinaryId) throws Exception {
-        appBinaryJobService.createJob(jobId, appBinaryId, "Generating .mobileprovision", "In Progress");
         AppBinaryAsset asset = generateIPAMobileProvision(appBinaryId);
         appBinaryJobService.deleteJobSilent(jobId);
         return asset;

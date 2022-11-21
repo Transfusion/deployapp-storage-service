@@ -226,10 +226,12 @@ public class AppController {
                                              @RequestBody GenerateAssetRequest request) {
         if (request.getType().equals(Constants.IPA_ASSET.MOBILEPROVISION.toString())) {
             UUID random = UUID.randomUUID();
+            appBinaryJobService.createJob(random, id, "Generating .mobileprovision", "In Progress");
             JobId jobId = jobScheduler.enqueue(random, () -> ipaAssetsService.generateIPAMobileProvision(random, id));
             return new GenerateAssetResult(jobId.asUUID());
         } else if (request.getType().equals(Constants.GENERAL_ASSET.PUBLIC_ICON.toString())) {
             UUID random = UUID.randomUUID();
+            appBinaryJobService.createJob(random, id, "Generating public icon", "In Progress");
             JobId jobId = jobScheduler.enqueue(random, () -> generalAssetsService.generatePublicIcon(random, id));
             return new GenerateAssetResult(jobId.asUUID());
         }

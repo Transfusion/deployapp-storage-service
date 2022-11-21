@@ -141,7 +141,6 @@ public class GeneralAssetsService {
     }
 
     public AppBinaryAsset generatePublicIcon(UUID jobId, UUID appBinaryId) throws Exception {
-        appBinaryJobService.createJob(jobId, appBinaryId, "Generating public icon", "In Progress");
         AppBinaryAsset asset = generatePublicIcon(appBinaryId);
         appBinaryJobService.deleteJobSilent(jobId);
         return asset;

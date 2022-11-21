@@ -4,7 +4,9 @@ import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryAsset;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryJob;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryAssetRepository;
+import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryJobRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.PermissionEvaluator;
@@ -51,6 +53,16 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
         return !_appBinaryAsset.get().isPrivate();
     }
 
+    @Autowired
+    private AppBinaryJobRepository appBinaryJobRepository;
+
+    private boolean checkAppBinaryJobEdit(Authentication authentication, UUID id) {
+        Optional<AppBinaryJob> _appBinaryJob = appBinaryJobRepository.findById(id);
+        if (_appBinaryJob.isEmpty()) throw new ResourceNotFoundException("AppBinaryAsset", "id", id);
+        AppBinaryJob appBinaryJob = _appBinaryJob.get();
+        return checkAppBinaryAssetEdit(authentication, appBinaryJob.getAppBinaryId());
+    }
+
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
         if (permission.equals("APPBINARY_EDIT")) {
@@ -59,6 +71,8 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
             return checkAppBinaryAssetEdit(authentication, (UUID) targetDomainObject);
         } else if (permission.equals("APPBINARYASSET_PUBLIC")) {
             return checkAppBinaryAssetPublic((UUID) targetDomainObject);
+        } else if (permission.equals("APPBINARYJOB_EDIT")) {
+            return checkAppBinaryJobEdit(authentication, (UUID) targetDomainObject);
         }
         return false;
     }
