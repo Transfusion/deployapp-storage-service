@@ -123,7 +123,7 @@ public class AppBinaryServiceTest {
     @WithMockCustomUser(id = "8ea610ed-170e-4f91-b7f0-a7480a8ba8e7")
     public void testFindOwnPaginated() {
         // populate the securitycontext with a given uuid
-        Page<AppBinaryDTO> page = appBinaryService.findOwnPaginated(null, PageRequest.of(0, 100));
+        Page<AppBinaryDTO> page = appBinaryService.findOwnPaginated(null, PageRequest.of(0, 100)).map(appBinaryMapper::toDTO);
 
         assertThat(appBinaryMapper.toDTO(foo), isIn(page.getContent()));
         assertThat(appBinaryMapper.toDTO(bar), not(isIn(page.getContent())));

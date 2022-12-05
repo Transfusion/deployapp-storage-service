@@ -38,6 +38,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -103,6 +107,8 @@ public class AppController {
                                    @RequestParam(required = false) List<String> searchValue,
                                    @RequestParam(required = false) List<String> types,
                                    Pageable page) {
+        SecurityContext context = SecurityContextHolder.getContext();
+        Authentication authentication = context.getAuthentication();
 
         int searchKeySize = searchKey == null ? 0 : searchKey.size();
         int searchOperationSize = searchOperation == null ? 0 : searchOperation.size();
@@ -127,10 +133,13 @@ public class AppController {
             appBinarySpecification = appBinarySpecification.and(appBinaryTypeSpecification);
         }
 
-        if (organizationId == null)
-            return appBinaryService.findOwnPaginated(appBinarySpecification, page);
-
-        return null;
+        if (organizationId == null) {
+            if (authentication instanceof AnonymousAuthenticationToken)
+                return appBinaryService.findOwnPaginatedAnonymous(appBinarySpecification, page).map(appBinaryMapper::toDTO);
+            else return appBinaryService.findOwnPaginated(appBinarySpecification, page).map(appBinaryMapper::toDTO);
+        } else {
+            throw new NotImplementedException("Organization support isn't available yet.");
+        }
     }
 
     @GetMapping("/binary/{id}")

@@ -2,6 +2,7 @@ package io.github.transfusion.deployapp.storagemanagementservice.auth;
 
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
+import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryAsset;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryJob;
@@ -24,11 +25,13 @@ public class CustomPermissionEvaluator implements PermissionEvaluator {
     @Autowired
     private AppBinaryRepository appBinaryRepository;
 
+    @Autowired
+    private SessionData sessionData;
+
     private boolean checkAppBinaryEdit(Authentication authentication, UUID id) {
-        if (authentication instanceof AnonymousAuthenticationToken) {
-            // TODO: anonymous uploads
-            return false;
-        }
+        if (authentication instanceof AnonymousAuthenticationToken)
+            return sessionData.getAnonymousAppBinaries().contains(id);
+
         // TODO: organizations
         UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
 

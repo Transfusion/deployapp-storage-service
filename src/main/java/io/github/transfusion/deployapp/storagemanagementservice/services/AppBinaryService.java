@@ -5,9 +5,11 @@ import io.github.transfusion.app_info_java_graalvm.AbstractPolyglotAdapter;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.APK;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.AppInfo;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
+import io.github.transfusion.deployapp.Constants;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
+import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Apk;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.ApkCert;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
@@ -35,7 +37,6 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -60,6 +61,9 @@ public class AppBinaryService {
         IDENTIFIER_TO_CLASS_NAME.put(Ipa.IDENTIFIER, Ipa.class);
         IDENTIFIER_TO_CLASS_NAME.put(Apk.IDENTIFIER, Apk.class);
     }
+
+    @Autowired
+    private SessionData sessionData;
 
     /* private Context createContext() {
         Context ctx = Context.newBuilder().
@@ -130,21 +134,30 @@ public class AppBinaryService {
     public AppBinary detectAndStoreOwnBinary(UUID storageCredentialId, Instant credentialCreatedOn, File binary) throws Exception {
         SecurityContext context = SecurityContextHolder.getContext();
         Authentication authentication = context.getAuthentication();
-        UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
+
+        UUID userId;
+        if (authentication instanceof AnonymousAuthenticationToken) {
+            userId = Constants.ANONYMOUS_UID;
+        } else {
+            userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
+        }
 
         AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
         AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
+
+        AppBinary res; // the parsed and saved binary
+
         if (data instanceof IPA) {
             // TODO: anonymous detect and store
-            Ipa res = storeIPA(storageCredentialId, credentialCreatedOn, binary, (IPA) data);
-            res.setUserId(userId);
+            Ipa ipa = storeIPA(storageCredentialId, credentialCreatedOn, binary, (IPA) data);
+            ipa.setUserId(userId);
             ((IPA) data).clear();
-            return ipaRepository.save(res);
+            res = ipaRepository.save(ipa);
         } else if (data instanceof APK) {
             // TODO: anonymous detect and store
-            Apk res = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
-            res.setUserId(userId);
-            res = apkRepository.save(res);
+            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
+            tmp.setUserId(userId);
+            res = apkRepository.save(tmp);
 
             for (Iterator<ApkCert> it = Arrays.stream(((APK) data).certificates())
                     .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
@@ -154,45 +167,62 @@ public class AppBinaryService {
                 cert.setAppBinary(res);
                 apkCertRepository.save(cert);
             }
-
-            return res;
         } else {
             throw new IllegalArgumentException("Only IPA and APK files supported for now.");
         }
+
+        if (authentication instanceof AnonymousAuthenticationToken)
+            sessionData.getAnonymousAppBinaries().add(res.getId());
+
+        return res;
     }
 
 
     @Autowired
     private AppBinaryRepository appBinaryRepository;
 
-    public Page<AppBinaryDTO> findOwnPaginated(Specification<AppBinary> specification, Pageable pageable) {
+    /**
+     * To be called only when the {@link Authentication} is {@link AnonymousAuthenticationToken}
+     *
+     * @param specification {@link Specification} for searching and filtering purposes
+     * @param pageable      {@link Pageable} for pagination purposes
+     * @return {@link Page<AppBinary>}
+     */
+    public Page<AppBinary> findOwnPaginatedAnonymous(Specification<AppBinary> specification, Pageable pageable) {
+        Specification<AppBinary> matchIdSpecification = null;
+        for (UUID id : sessionData.getAnonymousAppBinaries()) {
+            if (matchIdSpecification == null)
+                matchIdSpecification = new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("id", "eq", id));
+            else
+                matchIdSpecification = matchIdSpecification.or(new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("id", "eq", id)));
+        }
+        if (matchIdSpecification == null) return Page.empty(); // important!
+        specification = specification.and(matchIdSpecification);
+        return appBinaryRepository.findAll(specification, pageable);
+    }
+
+    /**
+     * To be called only when the {@link Authentication} is {@link CustomUserPrincipal}
+     *
+     * @param specification {@link Specification} for searching and filtering purposes
+     * @param pageable      {@link Pageable} for pagination purposes
+     * @return {@link Page<AppBinary>}
+     */
+    public Page<AppBinary> findOwnPaginated(Specification<AppBinary> specification, Pageable pageable) {
         SecurityContext context = SecurityContextHolder.getContext();
         Authentication authentication = context.getAuthentication();
-        if (authentication instanceof AnonymousAuthenticationToken) {
-            // TODO: anonymous listing of uploads
-        } else {
-            UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
-            if (specification != null)
-                specification = specification.and(new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("userId", "eq", userId)));
-            else specification = new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("userId", "eq", userId));
 
-            Page<AppBinary> results = appBinaryRepository.findAll(specification, pageable);
-            return results.map(AppBinaryMapper.instance::toDTO);
-        }
+        UUID userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
+        if (specification != null)
+            specification = specification.and(new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("userId", "eq", userId)));
+        else specification = new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("userId", "eq", userId));
 
-        return null;
+        Page<AppBinary> results = appBinaryRepository.findAll(specification, pageable);
+        return results;
     }
 
     public AppBinary getAppBinaryById(UUID id) {
-//        SecurityContext context = SecurityContextHolder.getContext();
-//        Authentication authentication = context.getAuthentication();
-//        if (authentication instanceof AnonymousAuthenticationToken) {
-//            // TODO: anonymous listing of uploads
-//        } else {
-        AppBinary binary = ensureBinaryAvailable(id);
-        return binary;
-//        }
-//        return null;
+        return ensureBinaryAvailable(id);
     }
 
     @Autowired
@@ -203,7 +233,7 @@ public class AppBinaryService {
      *
      * @param id {@link UUID} of the {@link AppBinary}
      */
-    public void deleteAppBinaryById(UUID id) throws JsonProcessingException {
+    public void deleteAppBinaryById(UUID id) {
         logger.info("deleting app binary by id {}", id);
         AppBinary binary = ensureBinaryAvailable(id);
         UUID storageCredentialId = binary.getStorageCredential();
@@ -213,6 +243,10 @@ public class AppBinaryService {
         logger.info("deleted app binary by id from our database {}", id);
         jobScheduler.enqueue(() -> storageService.deleteAllAppBinaryData(storageCredentialId, Instant.EPOCH, id));
         logger.info("scheduled storage deletion of app binary by id {}", id);
+
+        SecurityContext context = SecurityContextHolder.getContext();
+        Authentication authentication = context.getAuthentication();
+        if (authentication instanceof AnonymousAuthenticationToken) sessionData.getAnonymousAppBinaries().remove(id);
     }
 
     public AppBinary setDescription(UUID id, String description) {
