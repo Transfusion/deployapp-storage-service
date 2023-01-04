@@ -14,13 +14,15 @@ import static io.github.transfusion.deployapp.storagemanagementservice.services.
 public class FtpDeleter implements IDeleter {
 
     private final FtpCredential ftpCreds;
+    private final FTPClient client;
 
-    public FtpDeleter(FtpCredential ftpCreds) {
+    public FtpDeleter(FtpCredential ftpCreds) throws AuthenticationException, IOException {
         this.ftpCreds = ftpCreds;
+        this.client = getFTPClient(this.ftpCreds);
     }
 
     private boolean removeDirectoryRecursively(String pathName) throws AuthenticationException, IOException {
-        FTPClient client = getFTPClient(this.ftpCreds);
+//        FTPClient client = getFTPClient(this.ftpCreds);
         int replyCode = client.getReplyCode();
         if (!FTPReply.isPositiveCompletion(replyCode)) {
             return false;
@@ -51,11 +53,21 @@ public class FtpDeleter implements IDeleter {
     public void deleteStorageCredential() throws AuthenticationException, IOException {
         removeDirectoryRecursively(getFtpPublicPrefixDirectory(ftpCreds.getDirectory()));
         removeDirectoryRecursively(getFtpPrivatePrefixDirectory(ftpCreds.getDirectory()));
+        try {
+            client.disconnect();
+        } catch (Exception caught) {
+            caught.printStackTrace();
+        }
     }
 
     @Override
     public void deleteAllAppBinaryData(UUID id) throws AuthenticationException, IOException {
         removeDirectoryRecursively(getFtpPrivateAppBinaryDirectory(ftpCreds.getDirectory(), id));
         removeDirectoryRecursively(getFtpPublicAppBinaryDirectory(ftpCreds.getDirectory(), id));
+        try {
+            client.disconnect();
+        } catch (Exception caught) {
+            caught.printStackTrace();
+        }
     }
 }

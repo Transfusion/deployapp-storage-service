@@ -138,5 +138,5 @@ public abstract class StorageCredential {
     public abstract IURLGetter resolveURLGetter(IURLGetterResolver resolver);
 
     @JsonIgnore
-    public abstract IDeleter resolveDeleter(IDeleterResolver resolver);
+    public abstract IDeleter resolveDeleter(IDeleterResolver resolver) throws Exception;
 }

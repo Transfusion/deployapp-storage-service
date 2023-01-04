@@ -6,5 +6,5 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Cr
 public interface IDeleterResolver {
     IDeleter apply(S3Credential s3Credential);
 
-    IDeleter apply(FtpCredential ftpCredential);
+    IDeleter apply(FtpCredential ftpCredential) throws Exception;
 }

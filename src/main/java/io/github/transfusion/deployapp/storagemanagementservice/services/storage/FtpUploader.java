@@ -28,6 +28,11 @@ public class FtpUploader implements IUploader {
         client.makeDirectory(getFtpPublicAppBinaryDirectory(ftpCreds.getDirectory(), appBinaryId));
         String finalPath = getFtpPublicFileKey(ftpCreds.getDirectory(), appBinaryId, name);
         client.storeFile(finalPath, new FileInputStream(binary));
+        try {
+            client.disconnect();
+        } catch (Exception caught) {
+            caught.printStackTrace();
+        }
     }
 
     // there is no real concept of private with FTP...
@@ -37,5 +42,10 @@ public class FtpUploader implements IUploader {
         client.makeDirectory(getFtpPrivateAppBinaryDirectory(ftpCreds.getDirectory(), appBinaryId));
         String finalPath = getFtpPrivateFileKey(ftpCreds.getDirectory(), appBinaryId, name);
         client.storeFile(finalPath, new FileInputStream(binary));
+        try {
+            client.disconnect();
+        } catch (Exception caught) {
+            caught.printStackTrace();
+        }
     }
 }

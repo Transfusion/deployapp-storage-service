@@ -119,7 +119,7 @@ public class FtpCredential extends StorageCredential {
     }
 
     @Override
-    public IDeleter resolveDeleter(IDeleterResolver resolver) {
+    public IDeleter resolveDeleter(IDeleterResolver resolver) throws Exception {
         return resolver.apply(this);
     }
 

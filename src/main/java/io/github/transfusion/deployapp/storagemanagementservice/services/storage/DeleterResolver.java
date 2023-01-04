@@ -12,7 +12,7 @@ public class DeleterResolver implements IDeleterResolver {
     }
 
     @Override
-    public IDeleter apply(FtpCredential ftpCredential) {
+    public IDeleter apply(FtpCredential ftpCredential) throws Exception {
         return new FtpDeleter(ftpCredential);
     }
 }
