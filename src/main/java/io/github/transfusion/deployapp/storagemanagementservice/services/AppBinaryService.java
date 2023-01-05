@@ -261,6 +261,10 @@ public class AppBinaryService {
         return appBinaryRepository.save(binary);
     }
 
+    public void migrateAnonymousAppBinaries(Collection<UUID> appBinaryIds, UUID userId) {
+        appBinaryRepository.migrateAnonymousAppBinaries(userId, appBinaryIds);
+    }
+
 
     @Autowired
     private ResourceLoader resourceLoader;
