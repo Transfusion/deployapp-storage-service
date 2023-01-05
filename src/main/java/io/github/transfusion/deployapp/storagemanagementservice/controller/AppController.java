@@ -157,10 +157,13 @@ public class AppController {
     }
 
     @GetMapping(path = "/binary/{id}/itmsplist", produces = {MediaType.TEXT_XML_VALUE})
-    public ResponseEntity<String> getITMSPlist(@PathVariable("id") UUID id) throws IOException {
+    public ResponseEntity<String> getITMSPlist(@PathVariable("id") UUID id, @RequestHeader(value = HttpHeaders.USER_AGENT) String userAgent,
+                                               HttpServletRequest request) throws IOException {
+        String remoteAddr = request.getRemoteAddr();
         AppBinary binary = appBinaryService.getAppBinaryById(id);
         if (!binary.getAvailable())
             throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
+        appBinaryDownloadsService.recordDownload(userAgent, remoteAddr, id);
         appBinaryService.updateLastInstallDate(id);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(appBinaryService.getITMSPlist(id));
     }

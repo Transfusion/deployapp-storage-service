@@ -40,7 +40,7 @@ public abstract class AppDetailsMapper {
     JsonNode infoPlistToJsonNode(IPA ipa) throws JsonProcessingException {
         ObjectMapper mapper = mapperBuilder.build();
         Context ctx = ipa.getContext();
-        Value infoPlistJson = ctx.eval("ruby", "-> recv { recv.to_h.to_json }");
+        Value infoPlistJson = ctx.eval("ruby", "-> recv { recv.to_h.to_utf8.to_json }");
         Value res = infoPlistJson.execute(ipa.info().getValue());
 //        Value res = ipa.info().getValue().getMember("to_hash").getMember("to_json");
         logger.info(String.format("serialized info plist of %s", ipa.app_path()));
