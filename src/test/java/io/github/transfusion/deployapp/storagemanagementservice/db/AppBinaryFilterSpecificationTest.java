@@ -4,13 +4,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
-import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
+import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
+import org.jobrunr.scheduling.JobScheduler;
+import org.jobrunr.storage.StorageProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.math.BigDecimal;
@@ -20,18 +31,35 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.collection.IsIn.isIn;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.collection.IsIn.isIn;
 
 //@RunWith(SpringJUnit4ClassRunner.class)
-@ExtendWith(SpringExtension.class)
+@ActiveProfiles({"db-test"})
+@AutoConfigureMockMvc(addFilters = false)
+@ExtendWith({SpringExtension.class, MockitoExtension.class})
 @DataJpaTest
-//@ContextConfiguration(classes = { PersistenceJPAConfig.class })
+@Import({Jackson2ObjectMapperBuilder.class})
 //@Transactional
 //@TransactionConfiguration
 //@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class AppBinaryFilterSpecificationTest {
+
+    @TestConfiguration
+    public static class TestConfig {
+        @Bean
+//        @Qualifier("MainServiceWebClient")
+        @Primary
+        public JobScheduler jobScheduler() {
+            return Mockito.mock(JobScheduler.class);
+        }
+
+        @Bean
+        @Primary
+        public StorageProvider storageProvider() {
+            return Mockito.mock(StorageProvider.class);
+        }
+    }
 
     @Autowired
     private AppBinaryRepository repository;

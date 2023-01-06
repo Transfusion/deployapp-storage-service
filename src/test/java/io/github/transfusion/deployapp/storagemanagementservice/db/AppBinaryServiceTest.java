@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -40,6 +41,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.collection.IsIn.isIn;
 
+@ActiveProfiles({"db-test"})
 @ExtendWith({SpringExtension.class, MockitoExtension.class})
 @DataJpaTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
 @Import({GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
