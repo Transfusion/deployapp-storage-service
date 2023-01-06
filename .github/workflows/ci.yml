@@ -26,3 +26,6 @@ jobs:
         run: |
           chmod +x run_unit_tests.sh
           ./run_unit_tests.sh
+        env:
+          GPR_USERNAME: ${{ github.actor }}
+          GPR_PAT: ${{ secrets.GITHUB_TOKEN }}
