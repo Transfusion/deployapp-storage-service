@@ -9,7 +9,9 @@ on:
 
 jobs:
   unit-tests:
-    runs-on: ghcr.io/graalvm/graalvm-ce:ol7-java11-22.3.0
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/graalvm/graalvm-ce:ol7-java11-22.3.0
     steps:
       - uses: actions/checkout@v2
         with:
