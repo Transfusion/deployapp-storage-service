@@ -17,7 +17,7 @@ jobs:
         run: |
           microdnf install git -y
       - name: Setup Ruby
-        run: gu install ruby && /opt/graalvm-ce-java11-22.3.0/languages/ruby/lib/truffle/post_install_hook.sh && gem install json && gem install app-info
+        run: gu install ruby && /opt/graalvm-ce-java11-22.3.0/languages/ruby/lib/truffle/post_install_hook.sh && gem install app-info
       - uses: actions/checkout@v2
         with:
           submodules: recursive
