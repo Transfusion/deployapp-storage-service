@@ -1,6 +1,7 @@
 package io.github.transfusion.deployapp.storagemanagementservice.services.storage;
 
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpCredential;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.MockCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential;
 //import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,5 +20,10 @@ public class UploaderResolver implements IUploaderResolver {
     @Override
     public IUploader apply(FtpCredential credential) {
         return new FtpUploader(credential);
+    }
+
+    @Override
+    public IUploader apply(MockCredential credential) {
+        return new MockUploader(credential);
     }
 }

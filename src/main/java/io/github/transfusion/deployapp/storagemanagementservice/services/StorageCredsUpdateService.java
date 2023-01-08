@@ -35,9 +35,6 @@ public class StorageCredsUpdateService {
     private StorageCredentialMapper mapper;
 
     @Autowired
-    private StorageCredentialRepository repository;
-
-    @Autowired
     private Jackson2ObjectMapperBuilder mapperBuilder;
 
 
@@ -65,7 +62,7 @@ public class StorageCredsUpdateService {
             StorageCredentialDTO dto = mapper.fromJsonNode(mapperBuilder.build(), jsonNode);
             StorageCredential credential = mapper.mapStorageCredentialFromDTO(dto);
 
-            repository.save(credential);
+            storageCredentialRepository.save(credential);
             return credential;
         } else {
             return cred.get();

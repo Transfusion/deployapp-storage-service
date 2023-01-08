@@ -9,4 +9,6 @@ public interface IUploaderResolver {
     IUploader apply(S3Credential credential);
 
     IUploader apply(FtpCredential credential);
+
+    IUploader apply(MockCredential credential);
 }

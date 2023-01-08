@@ -1,6 +1,7 @@
 package io.github.transfusion.deployapp.storagemanagementservice.services.storage;
 
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpCredential;
+import io.github.transfusion.deployapp.storagemanagementservice.db.entities.MockCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.StorageCredential;
 
@@ -11,4 +12,6 @@ public interface IURLGetterResolver {
     IURLGetter apply(S3Credential credential);
 
     IURLGetter apply(FtpCredential credential);
+
+    IURLGetter apply(MockCredential credential);
 }
