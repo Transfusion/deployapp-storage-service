@@ -37,6 +37,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
@@ -69,6 +70,7 @@ import static io.github.transfusion.deployapp.storagemanagementservice.Utilities
 @ComponentScan(basePackages = {"io.github.transfusion.deployapp.storagemanagementservice.services.storage",
         "io.github.transfusion.deployapp.storagemanagementservice.services.assets",
         "io.github.transfusion.deployapp.storagemanagementservice.mappers"})
+@DirtiesContext(classMode= DirtiesContext.ClassMode.AFTER_CLASS)
 @Import({GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
         StorageCredentialMapperImpl.class,
         StorageCredsUpdateService.class,
@@ -81,7 +83,7 @@ import static io.github.transfusion.deployapp.storagemanagementservice.Utilities
 })
 public class AppBinaryServiceInternalIntegrationTest {
 
-    @TestConfiguration
+//    @TestConfiguration
     public static class TestConfig {
         @Bean
         @Qualifier("MainServiceWebClient")

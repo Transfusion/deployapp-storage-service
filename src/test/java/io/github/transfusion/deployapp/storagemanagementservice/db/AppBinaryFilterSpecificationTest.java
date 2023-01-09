@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -39,13 +40,14 @@ import static org.hamcrest.collection.IsIn.isIn;
 @AutoConfigureMockMvc(addFilters = false)
 @ExtendWith({SpringExtension.class, MockitoExtension.class})
 @DataJpaTest
-@Import({Jackson2ObjectMapperBuilder.class})
+@DirtiesContext(classMode= DirtiesContext.ClassMode.AFTER_CLASS)
+@Import({Jackson2ObjectMapperBuilder.class, AppBinaryFilterSpecificationTest.TestConfig.class})
 //@Transactional
 //@TransactionConfiguration
 //@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class AppBinaryFilterSpecificationTest {
 
-    @TestConfiguration
+//    @TestConfiguration
     public static class TestConfig {
         @Bean
 //        @Qualifier("MainServiceWebClient")

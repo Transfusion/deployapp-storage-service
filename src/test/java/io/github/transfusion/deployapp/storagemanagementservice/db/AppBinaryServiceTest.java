@@ -13,6 +13,8 @@ import io.github.transfusion.deployapp.storagemanagementservice.mappers.StorageC
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
+import org.jobrunr.scheduling.JobScheduler;
+import org.jobrunr.storage.StorageProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -56,16 +59,29 @@ import static org.hamcrest.collection.IsIn.isIn;
 
 
         AppBinaryServiceTest.TestConfig.class})
-
+@DirtiesContext(classMode= DirtiesContext.ClassMode.AFTER_CLASS)
 public class AppBinaryServiceTest {
 
-    @TestConfiguration
+//    @TestConfiguration
+//    https://stackoverflow.com/questions/46343450/inner-static-class-with-configuration-picked-up-by-spring-scanner-for-all-tests
     public static class TestConfig {
+        @Bean
+        @Primary
+        public JobScheduler jobScheduler() {
+            return Mockito.mock(JobScheduler.class);
+        }
+
         @Bean
         @Qualifier("MainServiceWebClient")
         @Primary
         public WebClient mainServiceWebClient() {
             return Mockito.mock(WebClient.class);
+        }
+
+        @Bean
+        @Primary
+        public StorageProvider storageProvider() {
+            return Mockito.mock(StorageProvider.class);
         }
     }
 
