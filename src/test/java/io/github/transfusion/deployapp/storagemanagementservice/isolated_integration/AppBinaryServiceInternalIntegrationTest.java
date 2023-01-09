@@ -216,9 +216,9 @@ public class AppBinaryServiceInternalIntegrationTest {
     }
 
     @Test
-    @WithMockCustomUser(id = "80ea8267-8472-49fe-8356-8cb075b2f565")
+    @WithMockCustomUser(id = "1b60870b-8b2a-4a66-bd31-6be99c6a6637")
     public void detectAndStoreOwnBinaryAPKAuthenticatedTest() throws Exception {
-        UUID userId = UUID.fromString("80ea8267-8472-49fe-8356-8cb075b2f565");
+        UUID userId = UUID.fromString("1b60870b-8b2a-4a66-bd31-6be99c6a6637");
 
         Instant now = Instant.now();
         UUID storageCredentialId = UUID.randomUUID();
