@@ -28,7 +28,6 @@ import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureDataJpa;
 import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -55,6 +54,7 @@ import java.util.stream.Collectors;
 
 import static io.github.transfusion.deployapp.storagemanagementservice.Utilities.getResourcesAbsolutePath;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.data.jpa.domain.Specification.where;
 
 @ActiveProfiles("db-test")
 @ExtendWith({SpringExtension.class, /*MockitoExtension.class*/})
@@ -254,5 +254,126 @@ public class AppBinaryServiceInternalIntegrationTest {
 
         page = appBinaryService.findOwnPaginated(null, PageRequest.of(0, 100));
         assertEquals(2, page.getTotalElements());
+    }
+
+    @Test
+    @WithAnonymousUser
+    public void deleteAppBinaryByIdAnonymousTest() throws Exception {
+        Instant now = Instant.now();
+        UUID storageCredentialId = UUID.randomUUID();
+
+        MockCredential mockCredential = new MockCredential();
+        mockCredential.setId(storageCredentialId);
+        mockCredential.setCreatedOn(now);
+        mockCredential.setCheckedOn(now);
+
+        mockCredential.setName("mock credential");
+        mockCredential.setUserId(Constants.ANONYMOUS_UID);
+        mockCredential = storageCredentialRepository.save(mockCredential);
+        storageCredentialId = mockCredential.getId();
+
+        String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
+        String absolutePath = getResourcesAbsolutePath(resourceName);
+        File file = new File(absolutePath);
+        AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        resourceName = "apps/org.gnucash.android_24003_apps.evozi.com.apk";
+        absolutePath = getResourcesAbsolutePath(resourceName);
+        file = new File(absolutePath);
+
+        AppBinary binary2 = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        assertEquals(2, sessionData.getAnonymousAppBinaries().size());
+
+        // now check that it is indeed in the sessionData
+        Assertions.assertTrue(sessionData.getAnonymousAppBinaries().contains(binary.getId()));
+        Assertions.assertTrue(sessionData.getAnonymousAppBinaries().contains(binary2.getId()));
+
+        // and check that it is retrievable
+        AppBinaryFilterSpecification specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        Page<AppBinary> page = appBinaryService.findOwnPaginatedAnonymous(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary2.getName()));
+
+        page = appBinaryService.findOwnPaginatedAnonymous(specification, PageRequest.of(0, 100));
+        assertThat(binary2.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        // now delete
+        appBinaryService.deleteAppBinaryById(binary2.getId());
+
+        assertEquals(1, sessionData.getAnonymousAppBinaries().size());
+
+        specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        page = appBinaryService.findOwnPaginatedAnonymous(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        page = appBinaryService.findOwnPaginatedAnonymous(where(null), PageRequest.of(0, 100));
+        assertEquals(1, page.getTotalElements());
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+    }
+
+    @Test
+    @WithMockCustomUser(id = "fddf77f1-3e76-4de5-b955-6a0446673c35")
+    public void deleteAppBinaryByIdAuthenticatedTest() throws Exception {
+        Instant now = Instant.now();
+        UUID storageCredentialId = UUID.randomUUID();
+
+        MockCredential mockCredential = new MockCredential();
+        mockCredential.setId(storageCredentialId);
+        mockCredential.setCreatedOn(now);
+        mockCredential.setCheckedOn(now);
+
+        mockCredential.setName("mock credential");
+        mockCredential.setUserId(Constants.ANONYMOUS_UID);
+        mockCredential = storageCredentialRepository.save(mockCredential);
+        storageCredentialId = mockCredential.getId();
+
+        String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
+        String absolutePath = getResourcesAbsolutePath(resourceName);
+        File file = new File(absolutePath);
+        AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        resourceName = "apps/org.gnucash.android_24003_apps.evozi.com.apk";
+        absolutePath = getResourcesAbsolutePath(resourceName);
+        file = new File(absolutePath);
+
+        AppBinary binary2 = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        // we are logged in!
+        assertEquals(0, sessionData.getAnonymousAppBinaries().size());
+
+        // and check that it is retrievable
+        AppBinaryFilterSpecification specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        Page<AppBinary> page = appBinaryService.findOwnPaginated(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary2.getName()));
+
+        page = appBinaryService.findOwnPaginated(specification, PageRequest.of(0, 100));
+        assertThat(binary2.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        // now delete
+        appBinaryService.deleteAppBinaryById(binary2.getId());
+
+//        assertEquals(1, sessionData.getAnonymousAppBinaries().size());
+
+        specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        page = appBinaryService.findOwnPaginated(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        page = appBinaryService.findOwnPaginated(where(null), PageRequest.of(0, 100));
+        assertEquals(1, page.getTotalElements());
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
     }
 }
