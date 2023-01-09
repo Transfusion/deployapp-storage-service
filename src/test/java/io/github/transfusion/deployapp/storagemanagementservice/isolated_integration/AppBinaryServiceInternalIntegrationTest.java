@@ -70,7 +70,7 @@ import static io.github.transfusion.deployapp.storagemanagementservice.Utilities
 @ComponentScan(basePackages = {"io.github.transfusion.deployapp.storagemanagementservice.services.storage",
         "io.github.transfusion.deployapp.storagemanagementservice.services.assets",
         "io.github.transfusion.deployapp.storagemanagementservice.mappers"})
-@DirtiesContext(classMode= DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Import({GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
         StorageCredentialMapperImpl.class,
         StorageCredsUpdateService.class,
@@ -83,7 +83,7 @@ import static io.github.transfusion.deployapp.storagemanagementservice.Utilities
 })
 public class AppBinaryServiceInternalIntegrationTest {
 
-//    @TestConfiguration
+    //    @TestConfiguration
     public static class TestConfig {
         @Bean
         @Qualifier("MainServiceWebClient")
@@ -129,6 +129,46 @@ public class AppBinaryServiceInternalIntegrationTest {
         File file = new File(absolutePath);
 
         AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        // now check that it is indeed in the sessionData
+        Assertions.assertTrue(sessionData.getAnonymousAppBinaries().contains(binary.getId()));
+
+        // and check that it is retrievable
+        AppBinaryFilterSpecification specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        Page<AppBinary> page = appBinaryService.findOwnPaginatedAnonymous(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+    }
+
+    @Test
+    @WithAnonymousUser
+    public void detectAndStoreOwnBinaryAPKAnonymousTest() throws Exception {
+        Instant now = Instant.now();
+        UUID storageCredentialId = UUID.randomUUID();
+
+        MockCredential mockCredential = new MockCredential();
+        mockCredential.setId(storageCredentialId);
+        mockCredential.setCreatedOn(now);
+        mockCredential.setCheckedOn(now);
+
+        mockCredential.setName("mock credential");
+        mockCredential.setUserId(Constants.ANONYMOUS_UID);
+        mockCredential = storageCredentialRepository.save(mockCredential);
+        storageCredentialId = mockCredential.getId();
+
+        String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
+        String absolutePath = getResourcesAbsolutePath(resourceName);
+        File file = new File(absolutePath);
+        appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        resourceName = "apps/org.gnucash.android_24003_apps.evozi.com.apk";
+        absolutePath = getResourcesAbsolutePath(resourceName);
+        file = new File(absolutePath);
+
+        AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        Assertions.assertEquals(2, sessionData.getAnonymousAppBinaries().size());
 
         // now check that it is indeed in the sessionData
         Assertions.assertTrue(sessionData.getAnonymousAppBinaries().contains(binary.getId()));
