@@ -2,6 +2,7 @@ package io.github.transfusion.deployapp.storagemanagementservice.isolated_integr
 
 import io.github.transfusion.deployapp.Constants;
 import io.github.transfusion.deployapp.session.SessionData;
+import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
 import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.MockCredential;
@@ -53,6 +54,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static io.github.transfusion.deployapp.storagemanagementservice.Utilities.getResourcesAbsolutePath;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ActiveProfiles("db-test")
 @ExtendWith({SpringExtension.class, /*MockitoExtension.class*/})
@@ -168,7 +170,7 @@ public class AppBinaryServiceInternalIntegrationTest {
 
         AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
 
-        Assertions.assertEquals(2, sessionData.getAnonymousAppBinaries().size());
+        assertEquals(2, sessionData.getAnonymousAppBinaries().size());
 
         // now check that it is indeed in the sessionData
         Assertions.assertTrue(sessionData.getAnonymousAppBinaries().contains(binary.getId()));
@@ -179,5 +181,78 @@ public class AppBinaryServiceInternalIntegrationTest {
 
         Page<AppBinary> page = appBinaryService.findOwnPaginatedAnonymous(specification, PageRequest.of(0, 100));
         assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+    }
+
+    @Test
+    @WithMockCustomUser(id = "80ea8267-8472-49fe-8356-8cb075b2f565")
+    public void detectAndStoreBinaryIPAAuthenticatedTest() throws Exception {
+        UUID userId = UUID.fromString("80ea8267-8472-49fe-8356-8cb075b2f565");
+
+        Instant now = Instant.now();
+        UUID storageCredentialId = UUID.randomUUID();
+
+        MockCredential mockCredential = new MockCredential();
+        mockCredential.setId(storageCredentialId);
+        mockCredential.setCreatedOn(now);
+        mockCredential.setCheckedOn(now);
+
+        mockCredential.setName("mock credential");
+        mockCredential.setUserId(userId);
+        mockCredential = storageCredentialRepository.save(mockCredential);
+        storageCredentialId = mockCredential.getId();
+
+        String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
+        String absolutePath = getResourcesAbsolutePath(resourceName);
+        File file = new File(absolutePath);
+
+        AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        // and check that it is retrievable
+        AppBinaryFilterSpecification specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        Page<AppBinary> page = appBinaryService.findOwnPaginated(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+    }
+
+    @Test
+    @WithMockCustomUser(id = "80ea8267-8472-49fe-8356-8cb075b2f565")
+    public void detectAndStoreOwnBinaryAPKAuthenticatedTest() throws Exception {
+        UUID userId = UUID.fromString("80ea8267-8472-49fe-8356-8cb075b2f565");
+
+        Instant now = Instant.now();
+        UUID storageCredentialId = UUID.randomUUID();
+
+        MockCredential mockCredential = new MockCredential();
+        mockCredential.setId(storageCredentialId);
+        mockCredential.setCreatedOn(now);
+        mockCredential.setCheckedOn(now);
+
+        mockCredential.setName("mock credential");
+        mockCredential.setUserId(userId);
+        mockCredential = storageCredentialRepository.save(mockCredential);
+        storageCredentialId = mockCredential.getId();
+
+        String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
+        String absolutePath = getResourcesAbsolutePath(resourceName);
+        File file = new File(absolutePath);
+
+        appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        resourceName = "apps/org.gnucash.android_24003_apps.evozi.com.apk";
+        absolutePath = getResourcesAbsolutePath(resourceName);
+        file = new File(absolutePath);
+
+        AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        // and check that it is retrievable
+        AppBinaryFilterSpecification specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        Page<AppBinary> page = appBinaryService.findOwnPaginated(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        page = appBinaryService.findOwnPaginated(null, PageRequest.of(0, 100));
+        assertEquals(2, page.getTotalElements());
     }
 }
