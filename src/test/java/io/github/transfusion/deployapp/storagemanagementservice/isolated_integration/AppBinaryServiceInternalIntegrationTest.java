@@ -1,6 +1,7 @@
 package io.github.transfusion.deployapp.storagemanagementservice.isolated_integration;
 
 import io.github.transfusion.deployapp.Constants;
+import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
 import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
@@ -36,6 +37,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -48,7 +54,10 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.collection.IsIn.isIn;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -375,5 +384,63 @@ public class AppBinaryServiceInternalIntegrationTest {
         page = appBinaryService.findOwnPaginated(where(null), PageRequest.of(0, 100));
         assertEquals(1, page.getTotalElements());
         assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+    }
+
+    @Test
+    @WithAnonymousUser
+    public void migrateAnonymousAppBinariesTest() throws Exception {
+        Instant now = Instant.now();
+        UUID storageCredentialId = UUID.randomUUID();
+
+        MockCredential mockCredential = new MockCredential();
+        mockCredential.setId(storageCredentialId);
+        mockCredential.setCreatedOn(now);
+        mockCredential.setCheckedOn(now);
+
+        mockCredential.setName("mock credential");
+        mockCredential.setUserId(Constants.ANONYMOUS_UID);
+        mockCredential = storageCredentialRepository.save(mockCredential);
+        storageCredentialId = mockCredential.getId();
+
+        String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
+        String absolutePath = getResourcesAbsolutePath(resourceName);
+        File file = new File(absolutePath);
+        AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        resourceName = "apps/org.gnucash.android_24003_apps.evozi.com.apk";
+        absolutePath = getResourcesAbsolutePath(resourceName);
+        file = new File(absolutePath);
+
+        AppBinary binary2 = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
+
+        // now login!
+        UUID userId = UUID.randomUUID();
+
+        List<GrantedAuthority> grantedAuthorities = Arrays.stream(new String[]{"ROLE_USER"}).map(a -> (GrantedAuthority) () -> a).collect(Collectors.toList());
+        CustomUserPrincipal principal =
+                new CustomUserPrincipal(userId,
+                        "foobar", "foo@bar.com",
+                        "foobar", "Foo Bar",
+                        true,
+                        grantedAuthorities);
+        Authentication auth =
+                new OAuth2AuthenticationToken(principal, principal.getAuthorities(),
+                        "google");
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        // perform migration
+        appBinaryService.migrateAnonymousAppBinaries(sessionData.getAnonymousAppBinaries(), userId);
+        // and check that it is retrievable
+        AppBinaryFilterSpecification specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary.getName()));
+
+        Page<AppBinary> page = appBinaryService.findOwnPaginated(specification, PageRequest.of(0, 100));
+        assertThat(binary.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
+
+        specification =
+                new AppBinaryFilterSpecification(new AppBinaryFilterCriteria("name", "like", binary2.getName()));
+
+        page = appBinaryService.findOwnPaginated(specification, PageRequest.of(0, 100));
+        assertThat(binary2.getId(), isIn(page.stream().map(AppBinary::getId).collect(Collectors.toList())));
     }
 }
