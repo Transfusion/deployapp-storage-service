@@ -1,19 +1,20 @@
 package io.github.transfusion.deployapp.storagemanagementservice.isolated_integration;
 
-import io.github.transfusion.deployapp.Constants;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
+import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomGlobalMethodSecurityConfiguration;
+import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomPermissionEvaluator;
 import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.AppController;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.PublicUtilityController;
+import io.github.transfusion.deployapp.storagemanagementservice.controller.WebSecurityConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.MockCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.StorageCredentialRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.StorageCredentialMapperImpl;
 import io.github.transfusion.deployapp.storagemanagementservice.services.*;
-import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,7 +62,7 @@ import java.util.stream.Collectors;
 import static io.github.transfusion.deployapp.storagemanagementservice.Utilities.getResourcesAbsolutePath;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
-@ActiveProfiles("db-test")
+//@ActiveProfiles("db-test")
 @ExtendWith({SpringExtension.class, /*MockitoExtension.class*/})
 //@DataJpaTest
 @AutoConfigureMockMvc
@@ -79,13 +80,18 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
         "io.github.transfusion.deployapp.storagemanagementservice.services.assets",
         "io.github.transfusion.deployapp.storagemanagementservice.mappers"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Import({GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
+@Import({WebSecurityConfig.class,
+        GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
         StorageCredentialMapperImpl.class,
         StorageCredsUpdateService.class,
         StorageService.class,
         AppBinaryService.class,
 
         SessionData.class,
+
+        // important!
+        CustomGlobalMethodSecurityConfiguration.class,
+        CustomPermissionEvaluator.class,
 
 //        controllers
         PublicUtilityController.class,
@@ -135,6 +141,8 @@ public class PermissionEvaluatorInternalIntegrationTest {
         // https://stackoverflow.com/questions/12087959/junit-run-set-up-method-once
         if (setUpIsDone) return;
 
+        Authentication backupAuth = SecurityContextHolder.getContext().getAuthentication(); // backup
+
         Instant now = Instant.now();
         UUID storageCredentialId = UUID.randomUUID();
 
@@ -169,6 +177,9 @@ public class PermissionEvaluatorInternalIntegrationTest {
         AppBinary binary = appBinaryService.detectAndStoreOwnBinary(storageCredentialId, now, file);
 
         binaryId = binary.getId();
+
+        SecurityContextHolder.getContext().setAuthentication(backupAuth); // restore context
+
         setUpIsDone = true;
     }
 
@@ -186,6 +197,7 @@ public class PermissionEvaluatorInternalIntegrationTest {
     }
 
     @Test
+    @WithAnonymousUser
     public void testRequest() throws Exception {
         mvc.perform(MockMvcRequestBuilders.get("/api/v1/utility/public/version"))
                 .andExpect(MockMvcResultMatchers.status().isOk());
