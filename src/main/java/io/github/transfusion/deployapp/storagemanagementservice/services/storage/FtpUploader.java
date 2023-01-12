@@ -1,7 +1,6 @@
 package io.github.transfusion.deployapp.storagemanagementservice.services.storage;
 
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpCredential;
-import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 
 import javax.naming.AuthenticationException;
@@ -10,8 +9,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.UUID;
 
-import static io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpCredential.PUBLIC_PREFIX;
-import static io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential.PRIVATE_PREFIX;
 import static io.github.transfusion.deployapp.storagemanagementservice.services.StorageService.*;
 
 public class FtpUploader implements IUploader {
@@ -27,7 +24,13 @@ public class FtpUploader implements IUploader {
         FTPClient client = getFTPClient(ftpCreds);
         client.makeDirectory(getFtpPublicAppBinaryDirectory(ftpCreds.getDirectory(), appBinaryId));
         String finalPath = getFtpPublicFileKey(ftpCreds.getDirectory(), appBinaryId, name);
-        client.storeFile(finalPath, new FileInputStream(binary));
+
+        client.enterLocalPassiveMode();
+        boolean successful = client.storeFile(finalPath, new FileInputStream(binary));
+        if (!successful) {
+            client.enterLocalActiveMode();
+            client.storeFile(finalPath, new FileInputStream(binary));
+        }
         try {
             client.disconnect();
         } catch (Exception caught) {
@@ -41,7 +44,12 @@ public class FtpUploader implements IUploader {
         FTPClient client = getFTPClient(ftpCreds);
         client.makeDirectory(getFtpPrivateAppBinaryDirectory(ftpCreds.getDirectory(), appBinaryId));
         String finalPath = getFtpPrivateFileKey(ftpCreds.getDirectory(), appBinaryId, name);
-        client.storeFile(finalPath, new FileInputStream(binary));
+        client.enterLocalPassiveMode();
+        boolean successful = client.storeFile(finalPath, new FileInputStream(binary));
+        if (!successful) {
+            client.enterLocalActiveMode();
+            client.storeFile(finalPath, new FileInputStream(binary));
+        }
         try {
             client.disconnect();
         } catch (Exception caught) {

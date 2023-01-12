@@ -26,7 +26,13 @@ public class FtpDownloader implements IDownloader {
         String finalPath = getFtpPrivateFileKey(ftpCreds.getDirectory(), appBinaryId, name);
         File tempFile = File.createTempFile("temp", name);
         FileOutputStream outputStream = new FileOutputStream(tempFile);
-        client.retrieveFile(finalPath, outputStream);
+
+        client.enterLocalPassiveMode();
+        boolean successful = client.retrieveFile(finalPath, outputStream);
+        if (!successful) {
+            client.enterLocalActiveMode();
+            client.retrieveFile(finalPath, outputStream);
+        }
         return tempFile;
     }
 }

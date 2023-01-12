@@ -1,0 +1,50 @@
+services:
+  ftp-web:
+    image: nginx
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost/ || exit 1"]
+      timeout: 10s
+    ports:
+      - '23456:80'
+    volumes:
+      - 'tmpvol:/usr/share/nginx/html'
+    networks:
+      - deployapp_storage_management_service_integration_test_net
+  ftp:
+    image: garethflowers/ftp-server
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -lnt | grep :21 || exit 1"]
+      timeout: 10s
+    environment:
+      - FTP_PASS=test
+      - FTP_USER=test
+    ports:
+      - '20-21:20-21/tcp'
+      - '40000-40009:40000-40009/tcp'
+    volumes:
+      - 'tmpvol:/home/test'
+    networks:
+      - deployapp_storage_management_service_integration_test_net
+  integration-tests:
+    image: deployapp-storagemanagementservice-integration-test:latest
+    # build: 
+    #   context: .
+    #   # target: external-integration-test
+    #   dockerfile: Dockerfile-integration-test
+
+    # too slow
+    # volumes:
+    #   - .:/app
+    depends_on:
+      ftp-web:
+        condition: service_healthy
+      ftp:
+        condition: service_healthy
+    networks:
+      - deployapp_storage_management_service_integration_test_net
+volumes:
+  tmpvol:
+    # tmpfs: true
+
+networks:
+  deployapp_storage_management_service_integration_test_net:
