@@ -53,7 +53,7 @@ jobs:
         with:
           file: Dockerfile-integration-test
           push: false
-          tags: deployapp-integration-test:latest
+          tags: deployapp-storagemanagementservice-integration-test:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: actions/checkout@v2
