@@ -11,7 +11,7 @@ then
   :
 else
   echo "gpr.username=$GPR_USERNAME" > gradle.properties
-  echo "gpr.username=$GPR_PAT" >> gradle.properties
+  echo "gpr.pat=$GPR_PAT" >> gradle.properties
 fi
 
 if [ -z "$GITHUB_ACTION" ]
