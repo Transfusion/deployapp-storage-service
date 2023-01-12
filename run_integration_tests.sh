@@ -6,6 +6,14 @@
 # docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests integration-tests
 # docker-compose -f docker-compose.test.yml down
 
+if [[ -z "$GPR_USERNAME" || -z "$GPR_PAT" ]]
+then
+  :
+else
+  echo "gpr.username=$GPR_USERNAME" > gradle.properties
+  echo "gpr.username=$GPR_PAT" >> gradle.properties
+fi
+
 if [ -z "$GITHUB_ACTION" ]
 then
   echo "Running outside of GH actions"
