@@ -29,8 +29,10 @@ public class FtpUploader implements IUploader {
         boolean successful = client.storeFile(finalPath, new FileInputStream(binary));
         if (!successful) {
             client.enterLocalActiveMode();
-            client.storeFile(finalPath, new FileInputStream(binary));
+            successful = client.storeFile(finalPath, new FileInputStream(binary));
         }
+        client.enterLocalPassiveMode(); // RESET!
+
         try {
             client.disconnect();
         } catch (Exception caught) {

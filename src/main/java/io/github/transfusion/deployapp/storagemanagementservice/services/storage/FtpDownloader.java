@@ -11,6 +11,8 @@ import java.util.UUID;
 
 import static io.github.transfusion.deployapp.storagemanagementservice.services.StorageService.getFTPClient;
 import static io.github.transfusion.deployapp.storagemanagementservice.services.StorageService.getFtpPrivateFileKey;
+import static org.apache.commons.net.ftp.FTPReply.isNegativePermanent;
+import static org.apache.commons.net.ftp.FTPReply.isNegativeTransient;
 
 public class FtpDownloader implements IDownloader {
 
@@ -31,8 +33,14 @@ public class FtpDownloader implements IDownloader {
         boolean successful = client.retrieveFile(finalPath, outputStream);
         if (!successful) {
             client.enterLocalActiveMode();
-            client.retrieveFile(finalPath, outputStream);
+            successful = client.retrieveFile(finalPath, outputStream);
         }
+        client.enterLocalPassiveMode(); // RESET!
+
+        if (!successful || isNegativePermanent(client.getReplyCode()) ||
+                isNegativeTransient(client.getReplyCode()))
+            throw new IOException(String.format("Unable to download object %s for app binary %s", name, appBinaryId.toString()));
+
         return tempFile;
     }
 }

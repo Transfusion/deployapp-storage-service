@@ -10,14 +10,16 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith({SpringExtension.class,})
-@Import({UploaderResolver.class, DownloaderResolver.class})
+@Import({UploaderResolver.class, DownloaderResolver.class, DeleterResolver.class})
 public class FtpIntegrationTests {
 
     @Autowired
@@ -26,8 +28,11 @@ public class FtpIntegrationTests {
     @Autowired
     private IDownloaderResolver downloaderResolver;
 
+    @Autowired
+    private IDeleterResolver deleterResolver;
+
     @Test
-    public void privateUploadDownloadTest() throws Exception {
+    public void privateUploadDownloadDeleteTest() throws Exception {
         UUID appBinaryId = UUID.randomUUID();
 
         FtpCredential creds = new FtpCredential();
@@ -54,6 +59,12 @@ public class FtpIntegrationTests {
 
         tempFile.delete();
         downloadedFile.delete();
+
+        IDeleter deleter = creds.resolveDeleter(deleterResolver);
+        deleter.deleteAllAppBinaryData(appBinaryId);
+
+        assertThrows(IOException.class, () -> ftpDownloader.downloadPrivateAppBinaryObject(appBinaryId, "sample"));
+        // assert is empty?
     }
 
 }

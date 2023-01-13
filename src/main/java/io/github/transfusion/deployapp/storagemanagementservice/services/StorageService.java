@@ -88,6 +88,7 @@ public class StorageService {
         client.makeDirectory(getFtpPublicPrefixDirectory(ftpCreds.getDirectory()));
         client.makeDirectory(getFtpPrivatePrefixDirectory(ftpCreds.getDirectory()));
         client.setFileType(FTP.BINARY_FILE_TYPE);
+        client.enterLocalPassiveMode(); // default to PASV mode
         return client;
     }
 
