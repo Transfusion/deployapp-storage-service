@@ -11,18 +11,17 @@ services:
     networks:
       - deployapp_storage_management_service_integration_test_net
   ftp:
-    image: garethflowers/ftp-server
+    image: delfer/alpine-ftp-server
     healthcheck:
       test: ["CMD-SHELL", "netstat -lnt | grep :21 || exit 1"]
       timeout: 10s
     environment:
-      - FTP_PASS=test
-      - FTP_USER=test
+      - USERS=test|test
     ports:
       - '20-21:20-21/tcp'
-      - '40000-40009:40000-40009/tcp'
+      - '21000-21010:21000-21010/tcp'
     volumes:
-      - 'tmpvol:/home/test'
+      - 'tmpvol:/ftp/test'
     networks:
       - deployapp_storage_management_service_integration_test_net
   integration-tests:

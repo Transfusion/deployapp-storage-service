@@ -43,7 +43,7 @@ public class FtpIntegrationTests {
         creds.setUsername("test");
         creds.setPassword("test");
         creds.setBaseUrl("http://ftp-web/");
-        creds.setDirectory("/");
+        creds.setDirectory("/ftp/test");
 
         File tempFile = File.createTempFile("testing", null, null);
         FileOutputStream fos = new FileOutputStream(tempFile);
@@ -82,7 +82,7 @@ public class FtpIntegrationTests {
         creds.setUsername("test");
         creds.setPassword("test");
         creds.setBaseUrl("http://ftp-web/");
-        creds.setDirectory("/");
+        creds.setDirectory("/ftp/test");
 
         File tempFile = File.createTempFile("testing", null, null);
         FileOutputStream fos = new FileOutputStream(tempFile);
