@@ -1,4 +1,33 @@
 services:
+  minio:
+    image: minio/minio:latest
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:9000/ || exit 1"]
+      timeout: 10s
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: access_key
+      MINIO_ROOT_PASSWORD: secret_key
+      ENABLE_HTTPS: 1
+    command: server --console-address ":9001" doc_gen_minio/export
+    networks:
+      - deployapp_storage_management_service_integration_test_net
+  minio_createbucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 access_key secret_key;
+      /usr/bin/mc rm -r --force myminio/samplebucket;
+      /usr/bin/mc mb myminio/samplebucket;
+      /usr/bin/mc anonymous set public myminio/samplebucket;
+      exit 0;
+      "
+    networks:
+      - deployapp_storage_management_service_integration_test_net
   ftp-web:
     image: nginx
     healthcheck:
@@ -39,6 +68,10 @@ services:
         condition: service_healthy
       ftp:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio_createbucket:
+        condition: service_started
     networks:
       - deployapp_storage_management_service_integration_test_net
 volumes:
