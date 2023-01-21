@@ -6,6 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 
+// https://stackoverflow.com/questions/69402556/ignore-class-in-hibernate-entity-mapping
 @Entity
 @Table(name = "mock_credentials")
 @PrimaryKeyJoinColumn(name = "id")

@@ -19,7 +19,7 @@ public class WebSecurityConfig {
                 authorizeRequests()
                 .antMatchers("/api/**",
                         "/oauth2/**", "/api-docs/**",
-                        "/api/*/user/profile", "/api/*/credentials/**", "/api/v1/app/binary",
+                        "/api/*/user/profile", "/api/*/credentials/**", "/api/v1/app/binary", "/api/v1/app/alias",
                         "/api/*/utility/public/**", "/microservice-api/**")
                 .permitAll();
         return http.build();
