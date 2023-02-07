@@ -1,13 +1,11 @@
 package io.github.transfusion.deployapp.storagemanagementservice.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.app_info_java_graalvm.AbstractPolyglotAdapter;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.APK;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.AppInfo;
 import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
 import io.github.transfusion.deployapp.Constants;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
-import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.exceptions.ResourceNotFoundException;
 import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Apk;
@@ -20,9 +18,9 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.IpaRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterCriteria;
 import io.github.transfusion.deployapp.storagemanagementservice.db.specifications.AppBinaryFilterSpecification;
-import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.text.StringSubstitutor;
@@ -78,6 +76,9 @@ public class AppBinaryService {
     private Context polyglotCtx;
 
     @Autowired
+    private AppBinaryInitialStoreService appBinaryInitialStoreService;
+
+    @Autowired
     private StorageService storageService;
 
     /**
@@ -100,17 +101,17 @@ public class AppBinaryService {
     @Autowired
     private IpaRepository ipaRepository;
 
-    private Ipa storeIPA(UUID storageCredentialId, Instant credentialCreatedOn, File binary, IPA ipa) throws Exception {
-        UUID id = UUID.randomUUID();
-//        final String fileName = String.format("%s-%s-%s.ipa", ipa.bundle_id(), ipa.build_version(), ipa.release_version());
-        // attempt to upload first
-        storageService.uploadPrivateAppBinaryObject(storageCredentialId, credentialCreatedOn, id,
-//                String.format("%s-%s-%s.ipa", ipa.bundle_id(), ipa.build_version(), ipa.release_version())
-                "binary.ipa", binary);
-        // before saving into the db
-        Ipa appBinaryRecord = appDetailsMapper.mapPolyglotIPAtoIpa(ipa, id, storageCredentialId, binary.getName());
-        return appBinaryRecord;
-    }
+//    private Ipa storeIPA(UUID storageCredentialId, Instant credentialCreatedOn, File binary, IPA ipa) throws Exception {
+//        UUID id = UUID.randomUUID();
+////        final String fileName = String.format("%s-%s-%s.ipa", ipa.bundle_id(), ipa.build_version(), ipa.release_version());
+//        // attempt to upload first
+//        storageService.uploadPrivateAppBinaryObject(storageCredentialId, credentialCreatedOn, id,
+////                String.format("%s-%s-%s.ipa", ipa.bundle_id(), ipa.build_version(), ipa.release_version())
+//                "binary.ipa", binary);
+//        // before saving into the db
+//        Ipa appBinaryRecord = appDetailsMapper.mapPolyglotIPAtoIpa(ipa, id, storageCredentialId, binary.getName());
+//        return appBinaryRecord;
+//    }
 
     @Autowired
     private ApkRepository apkRepository;
@@ -118,13 +119,13 @@ public class AppBinaryService {
     @Autowired
     private ApkCertRepository apkCertRepository;
 
-    private Apk storeAPK(UUID storageCredentialId, Instant credentialCreatedOn, File binary, APK apk) throws Exception {
-        UUID id = UUID.randomUUID();
-        storageService.uploadPrivateAppBinaryObject(storageCredentialId, credentialCreatedOn, id,
-                "binary.apk", binary);
-        Apk appBinaryRecord = appDetailsMapper.mapPolyglotAPKtoApk(apk, id, storageCredentialId, binary.getName());
-        return appBinaryRecord;
-    }
+//    private Apk storeAPK(UUID storageCredentialId, Instant credentialCreatedOn, File binary, APK apk) throws Exception {
+//        UUID id = UUID.randomUUID();
+//        storageService.uploadPrivateAppBinaryObject(storageCredentialId, credentialCreatedOn, id,
+//                "binary.apk", binary);
+//        Apk appBinaryRecord = appDetailsMapper.mapPolyglotAPKtoApk(apk, id, storageCredentialId, binary.getName());
+//        return appBinaryRecord;
+//    }
 
     /**
      * @param storageCredentialId UUID in storage_credentials
@@ -145,19 +146,25 @@ public class AppBinaryService {
         AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
         AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
 
+        UUID id = UUID.randomUUID();
+
         AppBinary res; // the parsed and saved binary
 
         if (data instanceof IPA) {
-            // TODO: anonymous detect and store
-            Ipa ipa = storeIPA(storageCredentialId, credentialCreatedOn, binary, (IPA) data);
+//            Ipa ipa = storeIPA(storageCredentialId, credentialCreatedOn, binary, (IPA) data);
+            Ipa ipa = appDetailsMapper.mapPolyglotIPAtoIpa((IPA) data, id, storageCredentialId, binary.getName());
             ipa.setUserId(userId);
             ((IPA) data).clear();
             res = ipaRepository.save(ipa);
+            // perform the actual upload asynchronously.
+            appBinaryInitialStoreService.storeAppBinary(res, storageCredentialId,
+                    credentialCreatedOn, "binary.ipa", binary);
+
         } else if (data instanceof APK) {
-            // TODO: anonymous detect and store
-            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
-            tmp.setUserId(userId);
-            res = apkRepository.save(tmp);
+//            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
+            Apk apk = appDetailsMapper.mapPolyglotAPKtoApk((APK) data, id, storageCredentialId, binary.getName());
+            apk.setUserId(userId);
+            res = apkRepository.save(apk);
 
             for (Iterator<ApkCert> it = Arrays.stream(((APK) data).certificates())
                     .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
@@ -167,6 +174,10 @@ public class AppBinaryService {
                 cert.setAppBinary(res);
                 apkCertRepository.save(cert);
             }
+
+            // perform the actual upload asynchronously
+            appBinaryInitialStoreService.storeAppBinary(res, storageCredentialId,
+                    credentialCreatedOn, "binary.apk", binary);
         } else {
             throw new IllegalArgumentException("Only IPA and APK files supported for now.");
         }
@@ -284,26 +295,39 @@ public class AppBinaryService {
         if (!(binary instanceof Ipa)) throw new IllegalArgumentException(String.format("%s is not an IPA.", id));
 //        if (!binary.getAvailable())
 //            throw new AccessDeniedException(String.format("AppBinary with id %s is not available", id));
+
+        String template;
+        URL iconURL = null;
+        try {
+            iconURL = generalAssetsService.getPublicIcon(id);
+        } catch (ResourceNotFoundException ignored) {
+            // ignored
+        }
+
         // load itms plist template from the ResourceLoader
-        Resource resource = resourceLoader.getResource("classpath:manifest-template.txt");
-        String template = AppBinaryUtils.resourceAsString(resource);
+        Resource resource;
+        if (iconURL != null) {
+            resource = resourceLoader.getResource("classpath:manifest-template.txt");
+        } else {
+            resource = resourceLoader.getResource("classpath:manifest-template-sans-images.txt");
+        }
+        template = AppBinaryUtils.resourceAsString(resource);
 
         Map<String, String> valuesMap = new HashMap<>();
         valuesMap.put("downloadableUrl", StringEscapeUtils.escapeXml(storageService.getURL(binary.getStorageCredential(), Instant.EPOCH,
                 id, "binary.ipa", true).toString()));
 
-        URL iconURL = generalAssetsService.getPublicIcon(id);
-        valuesMap.put("displayImage", StringEscapeUtils.escapeXml(iconURL.toString()));
-        valuesMap.put("fullSizeImage", StringEscapeUtils.escapeXml(iconURL.toString()));
+        if (iconURL != null) {
+            valuesMap.put("displayImage", iconURL.toString());
+            valuesMap.put("fullSizeImage", iconURL.toString());
+        }
 
         valuesMap.put("bundleId", binary.getIdentifier());
         valuesMap.put("bundleVersion", binary.getVersion());
         valuesMap.put("name", binary.getName());
         StringSubstitutor sub = new StringSubstitutor(valuesMap);
 
-        String g = sub.replace(template);
-        System.out.println(g);
-        return g;
+        return sub.replace(template);
     }
 
     public URL getURL(UUID id) throws IOException {

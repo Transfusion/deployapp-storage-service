@@ -43,6 +43,7 @@ data class IpaDTO(
     override val userId: UUID?,
 
     override val available: Boolean,
+    override val appBinaryStoreJob: AppBinaryStoreJobDTO?
 ) : AppBinaryDTO, java.io.Serializable {
     override val type: String
         get() = "IPA"

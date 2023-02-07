@@ -41,4 +41,9 @@ public class S3Uploader implements IUploader {
         /*return*/
         client.putObject(objectRequest, RequestBody.fromFile(binary));
     }
+
+    @Override
+    public void abort() {
+        // no-op!
+    }
 }

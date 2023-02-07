@@ -64,6 +64,22 @@ public abstract class AppBinary {
     @Column(name = "available", nullable = false)
     private Boolean available = false;
 
+    @OneToOne(mappedBy = "appBinary", cascade = CascadeType.REMOVE)
+    private AppBinaryStoreJob appBinaryStoreJob;
+
+    public AppBinaryStoreJob getAppBinaryStoreJob() {
+        return appBinaryStoreJob;
+    }
+
+//    public void setAppBinaryStoreJob(AppBinaryStoreJob appBinaryStoreJob) {
+//        this.appBinaryStoreJob = appBinaryStoreJob;
+//    }
+
+//    @PreRemove
+//    private void removeAppBinaryStoreJob() {
+//        if (appBinaryStoreJob != null)
+//    }
+
     public Boolean getAvailable() {
         return available;
     }

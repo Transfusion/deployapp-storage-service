@@ -20,4 +20,9 @@ public class MockUploader implements IUploader {
     public void uploadPrivateAppBinaryObject(UUID appBinaryId, String name, File binary) throws Exception {
 
     }
+
+    @Override
+    public void abort() {
+
+    }
 }

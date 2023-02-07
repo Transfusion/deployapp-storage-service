@@ -1,11 +1,10 @@
 package io.github.transfusion.deployapp.messaging;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.core.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.UUID;
 
 @Configuration
 public class AMQPConfig {
@@ -28,6 +27,30 @@ public class AMQPConfig {
     public Binding declareIntegrationEventsBinding() {
         return BindingBuilder.bind(integrationEventsQueue())
                 .to(deployAppExchange()).with(INTEGRATION_EVENTS_ROUTING_KEY);
+    }
+
+    public static final String FANOUT_EXCHANGE_NAME = "deployapp-exchange-fanout";
+
+    public String getFANOUT_EVENTS_QUEUE_NAME() {
+        return FANOUT_EVENTS_QUEUE_NAME;
+    }
+
+    public static final String FANOUT_EVENTS_QUEUE_NAME = "dpl-str-" + UUID.randomUUID();
+
+    @Bean("deployAppExchangeFanout")
+    public FanoutExchange deployAppExchangeFanout() {
+        return new FanoutExchange(FANOUT_EXCHANGE_NAME);
+    }
+
+    @Bean("fanoutEventsQueue")
+    public Queue fanoutEventsQueue() {
+        return QueueBuilder.nonDurable(FANOUT_EVENTS_QUEUE_NAME).autoDelete().build();
+    }
+
+    @Bean
+    public Binding declareFanoutEventsBinding() {
+        return BindingBuilder.bind(fanoutEventsQueue())
+                .to(deployAppExchangeFanout());
     }
 
 
