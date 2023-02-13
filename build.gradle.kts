@@ -77,8 +77,13 @@ dependencies {
     // https://mvnrepository.com/artifact/org.springframework.retry/spring-retry
     implementation("org.springframework.retry:spring-retry:1.3.4")
 
+    // for leader election
+    implementation("org.springframework.integration:spring-integration-core")
+    implementation("org.springframework.integration:spring-integration-redis")
+
     // https://stackoverflow.com/questions/67299161/mock-static-method-in-junit-5-using-mockito
     testImplementation("org.springframework.boot:spring-boot-starter-test") // already includes mockito
+    testImplementation("org.mockito:mockito-inline:4.11.0")
 
     // https://mvnrepository.com/artifact/com.h2database/h2
     testImplementation("com.h2database:h2:2.1.214")

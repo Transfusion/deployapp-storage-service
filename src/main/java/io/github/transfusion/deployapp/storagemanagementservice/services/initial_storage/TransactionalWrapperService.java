@@ -40,6 +40,11 @@ public class TransactionalWrapperService {
         }
     }
 
+    @Transactional
+    public void deleteStoreJob(UUID appBinaryStoreJobId) {
+        appBinaryStoreJobRepository.deleteById(appBinaryStoreJobId);
+    }
+
     public AppBinaryStoreJob getReferenceById(UUID appBinaryStoreJobId) {
         return appBinaryStoreJobRepository.getReferenceById(appBinaryStoreJobId);
     }

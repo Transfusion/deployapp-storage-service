@@ -6,6 +6,7 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppB
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryStoreJobMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.messaging.FanoutEventsSender;
 import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
+import io.swagger.v3.oas.annotations.Operation;
 import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,6 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -63,11 +63,10 @@ public class AppBinaryInitialStoreController {
         return ResponseEntity.ok(null);
     }
 
-// TODO: finish implementation
-//    @DeleteMapping("/initial_storage_jobs/{id}")
-//    @Operation(summary = "Dismisses a job in SUCCESSFUL or ABORTED state.")
-//    public ResponseEntity<Void> deleteStorageJob(UUID id) {
-//
-//        return ResponseEntity.ok(null);
-//    }
+    @DeleteMapping("/initial_storage_jobs/{id}")
+    @Operation(summary = "Dismisses a job in SUCCESSFUL or CANCELLING state.")
+    public ResponseEntity<Void> deleteStorageJob(@PathVariable("id") UUID id) {
+        appBinaryInitialStoreService.deleteStoreAppBinary(id);
+        return ResponseEntity.ok(null);
+    }
 }

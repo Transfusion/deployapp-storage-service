@@ -26,6 +26,8 @@ import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
 import java.io.File;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -148,9 +150,6 @@ public class AppBinaryInitialStoreService {
                     return -1;
                 }
 
-//                Thread.sleep(30000);
-//                throw new RuntimeException("googoogaagaa");
-
                 logger.info(String.format("starting initial upload of appbinary %s", appBinaryId));
                 uploader.uploadPrivateAppBinaryObject(
                         /*storageCredentialId,
@@ -203,9 +202,25 @@ public class AppBinaryInitialStoreService {
             transactionalWrapperService.cancelStoreJob(jobId);
     }
 
+    public void deleteStoreAppBinary(UUID jobId) {
+        AppBinaryStoreJob job = transactionalWrapperService.getReferenceById(jobId);
+        if (!Arrays.asList(InitialStoreStatus.CANCELLING, InitialStoreStatus.SUCCESSFUL)
+                .contains(job.getStatus())) {
+            throw new IllegalArgumentException(String.format("AppBinaryStoreJob with id %s is not in CANCELLING or SUCCESSFUL state.", jobId));
+        }
+
+        // only allow deletion if it has been stuck in CANCELLING for more than one hour
+        if (job.getStatus() == InitialStoreStatus.CANCELLING &&
+                ChronoUnit.MINUTES.between(job.getCreatedDate(), Instant.now()) < 60
+        )
+            throw new IllegalArgumentException(String.format("AppBinaryStoreJob with id %s in CANCELLING state is not ready to be deleted yet.", jobId));
+        transactionalWrapperService.deleteStoreJob(job.getId());
+    }
+
     // to be run on application startup. all pods will be taken offline in the event of an upgrade.
-    @EventListener
-    public void appReady(ApplicationReadyEvent event) {
+//    @EventListener
+//    public void appReady(ApplicationReadyEvent event) {
+    public void cleanupStaleJobs() {
         appBinaryStoreJobRepository.bulkUpdateStatus(InitialStoreStatus.PROCESSING, InitialStoreStatus.ABORTED);
         appBinaryStoreJobRepository.bulkUpdateStatus(InitialStoreStatus.CANCELLING, InitialStoreStatus.ABORTED);
         logger.info("done initial AppBinaryStoreJob cleanup");
