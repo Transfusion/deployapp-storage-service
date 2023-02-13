@@ -94,8 +94,10 @@ public class AppController {
         File tempFile = File.createTempFile("binary", request.getBinary().getOriginalFilename());
         request.getBinary().transferTo(tempFile);
         // TODO: handle organization
+        if (request.getOrganizationId() != null)
+            throw new NotImplementedException("Organization support isn't available yet.");
         AppBinary appBinary = appBinaryService.detectAndStoreOwnBinary(request.getStorageCredentialId(), request.getCredentialCreatedOn(), tempFile);
-        tempFile.delete();
+//        tempFile.delete();
         return new ResponseEntity<>(appBinaryMapper.toDTO(appBinary), HttpStatus.CREATED);
     }
 
@@ -206,12 +208,24 @@ public class AppController {
     @PutMapping("/binary/{id}/available")
     @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
     public ResponseEntity<AppBinaryDTO> putAppBinaryAvailable(@PathVariable("id") UUID id, @RequestBody PutAppBinaryAvailableRequest body) {
+        AppBinary binary = appBinaryService.ensureBinaryAvailable(id);
+        if (binary.getAppBinaryStoreJob() != null
+                && !binary.getAppBinaryStoreJob().isSuccessful())
+            throw new IllegalArgumentException(String.format("AppBinary %s has not been stored yet.", id));
+
         return new ResponseEntity<>(appBinaryMapper.toDTO(appBinaryService.setAvailable(id, body.getAvailable())), HttpStatus.OK);
     }
 
     @DeleteMapping("/binary/{id}")
     @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
     public ResponseEntity<Void> deleteAppBinaryById(@PathVariable("id") UUID id) throws JsonProcessingException {
+        AppBinary binary = appBinaryService.ensureBinaryAvailable(id);
+        if (binary.getAppBinaryStoreJob() != null
+                && !(binary.getAppBinaryStoreJob().isSuccessful()
+                || binary.getAppBinaryStoreJob().isAborted())
+        )
+            throw new IllegalArgumentException(String.format("AppBinary %s has not been stored yet.", id));
+
         appBinaryService.deleteAppBinaryById(id);
         return ResponseEntity.noContent().build();
     }
@@ -236,6 +250,11 @@ public class AppController {
     @PostMapping("/binary/{id}/generateAsset")
     public GenerateAssetResult generateAsset(@PathVariable("id") UUID id,
                                              @RequestBody GenerateAssetRequest request) {
+        AppBinary binary = appBinaryService.ensureBinaryAvailable(id);
+        if (binary.getAppBinaryStoreJob() != null
+                && !binary.getAppBinaryStoreJob().isSuccessful())
+            throw new IllegalArgumentException(String.format("AppBinary %s has not been stored yet.", id));
+
         if (request.getType().equals(Constants.IPA_ASSET.MOBILEPROVISION.toString())) {
             UUID random = UUID.randomUUID();
             appBinaryJobService.createJob(random, id, "Generating .mobileprovision", "In Progress");

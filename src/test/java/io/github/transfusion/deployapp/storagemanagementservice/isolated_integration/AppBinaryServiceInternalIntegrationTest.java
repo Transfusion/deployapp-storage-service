@@ -4,6 +4,7 @@ import io.github.transfusion.deployapp.Constants;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
+import io.github.transfusion.deployapp.storagemanagementservice.config.AsyncExecutionConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.MockCredential;
@@ -15,10 +16,13 @@ import io.github.transfusion.deployapp.storagemanagementservice.services.AppBina
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.TransactionalWrapperService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -37,6 +41,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
@@ -88,6 +93,10 @@ import static org.springframework.data.jpa.domain.Specification.where;
         StorageService.class,
         AppBinaryService.class,
 
+//        not actually going to be called, included to avoid NoSuchBeanDefinitionException.
+        AsyncExecutionConfig.class,
+        TransactionalWrapperService.class,
+
         SessionData.class,
 
         AppBinaryServiceInternalIntegrationTest.TestConfig.class
@@ -108,6 +117,13 @@ public class AppBinaryServiceInternalIntegrationTest {
         public AppBinaryJobService appBinaryJobService() {
             return Mockito.mock(AppBinaryJobService.class);
         }
+
+        @Bean
+        @Primary
+        public AppBinaryInitialStoreService appBinaryInitialStoreService() {
+            return Mockito.mock(AppBinaryInitialStoreService.class);
+        }
+
     }
 
     @Autowired

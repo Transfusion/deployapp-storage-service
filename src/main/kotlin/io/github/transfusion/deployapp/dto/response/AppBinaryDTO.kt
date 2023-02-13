@@ -23,4 +23,6 @@ interface AppBinaryDTO {
 
     val description: String?
     val available: Boolean
+
+    val appBinaryStoreJob: AppBinaryStoreJobDTO?
 }

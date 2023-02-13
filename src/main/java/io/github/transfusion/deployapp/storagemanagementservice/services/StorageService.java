@@ -5,6 +5,7 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.entities.FtpC
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.S3Credential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.StorageCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
+import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.CustomFTPClient;
 import io.github.transfusion.deployapp.storagemanagementservice.services.storage.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
@@ -80,8 +81,8 @@ public class StorageService {
         return String.format("%s/%s%s/%s", directory, PUBLIC_PREFIX, appBinaryId, name);
     }
 
-    public static FTPClient getFTPClient(FtpCredential ftpCreds) throws IOException, AuthenticationException {
-        FTPClient client = new FTPClient();
+    public static CustomFTPClient getFTPClient(FtpCredential ftpCreds) throws IOException, AuthenticationException {
+        CustomFTPClient client = new CustomFTPClient();
         client.connect(ftpCreds.getServer(), ftpCreds.getPort());
         if (!client.login(ftpCreds.getUsername(), ftpCreds.getPassword()))
             throw new AuthenticationException(String.format("Login failed to server %s port %d", ftpCreds.getServer(), ftpCreds.getPort()));
@@ -158,6 +159,19 @@ public class StorageService {
         StorageCredential credential = storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn);
         credential.resolveUploader(uploaderResolver).uploadPrivateAppBinaryObject(id, name, object);
 //            TODO: fill in other credential methods
+    }
+
+    /**
+     * Used in {@link io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService} to be able to call {@link IUploader#abort()} from another thread
+     *
+     * @param storageCredentialId the {@link java.util.UUID} of the given {@link StorageCredential}
+     * @param credentialCreatedOn the creation {@link java.time.Instant} of the given {@link StorageCredential} at the time of reading
+     * @return the {@link IUploader} implementation
+     * @throws JsonProcessingException thrown if the main microservice is down
+     */
+    public IUploader resolveUploader(UUID storageCredentialId,
+                                     Instant credentialCreatedOn) throws JsonProcessingException {
+        return storageCredsUpdateService.getCredential(storageCredentialId, credentialCreatedOn).resolveUploader(uploaderResolver);
     }
 
     /**

@@ -9,7 +9,8 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring",
+        uses = {AppBinaryStoreJobMapper.class})
 public interface AppBinaryMapper {
 
     default AppBinaryDTO toDTO(AppBinary a) {

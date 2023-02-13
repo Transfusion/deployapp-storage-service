@@ -5,6 +5,7 @@ import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
 import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomGlobalMethodSecurityConfiguration;
 import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomPermissionEvaluator;
+import io.github.transfusion.deployapp.storagemanagementservice.config.AsyncExecutionConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.AppController;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.PublicUtilityController;
@@ -15,10 +16,13 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.StorageCredentialRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.StorageCredentialMapperImpl;
 import io.github.transfusion.deployapp.storagemanagementservice.services.*;
+import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
+import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.TransactionalWrapperService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -87,6 +91,10 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
         StorageService.class,
         AppBinaryService.class,
 
+        //        not actually going to be called, included to avoid NoSuchBeanDefinitionException.
+        AsyncExecutionConfig.class,
+        TransactionalWrapperService.class,
+
         SessionData.class,
 
         // important!
@@ -119,6 +127,18 @@ public class PermissionEvaluatorInternalIntegrationTest {
         @Primary
         public AppBinaryDownloadsService appBinaryDownloadsService() {
             return Mockito.mock(AppBinaryDownloadsService.class);
+        }
+
+        @Bean
+        @Primary
+        public AppBinaryInitialStoreService appBinaryInitialStoreService() {
+            return Mockito.mock(AppBinaryInitialStoreService.class);
+        }
+
+        @Bean
+        @Primary
+        public RabbitTemplate rabbitTemplate() {
+            return Mockito.mock(RabbitTemplate.class);
         }
     }
 

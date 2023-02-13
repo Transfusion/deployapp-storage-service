@@ -16,4 +16,6 @@ public interface IUploader {
             UUID appBinaryId, String name, File binary) throws Exception;
 
     /*PutObjectResponse*/ void uploadPrivateAppBinaryObject(/*S3Credential s3Creds,*/ UUID appBinaryId, String name, File binary) throws Exception;
+
+    void abort();
 }

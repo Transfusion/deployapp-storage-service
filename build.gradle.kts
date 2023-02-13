@@ -24,6 +24,8 @@ repositories {
     }
 }
 
+extra["mockito.version"] = "4.11.0";
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -70,12 +72,17 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.commons/commons-text
     implementation(group = "org.apache.commons", name = "commons-text", version = "1.10.0")
     // https://mvnrepository.com/artifact/commons-net/commons-net
-    implementation(group = "commons-net", name = "commons-net", version = "3.8.0")
+    implementation(group = "commons-net", name = "commons-net", version = "3.9.0")
+
+    // https://mvnrepository.com/artifact/org.springframework.retry/spring-retry
+    implementation("org.springframework.retry:spring-retry:1.3.4")
+
+    // for leader election
+    implementation("org.springframework.integration:spring-integration-core")
+    implementation("org.springframework.integration:spring-integration-redis")
 
     // https://stackoverflow.com/questions/67299161/mock-static-method-in-junit-5-using-mockito
-    testImplementation("org.springframework.boot:spring-boot-starter-test") {
-        exclude(group = "org.mockito", module = "mockito-core")
-    } // already includes mockito
+    testImplementation("org.springframework.boot:spring-boot-starter-test") // already includes mockito
     testImplementation("org.mockito:mockito-inline:4.11.0")
 
     // https://mvnrepository.com/artifact/com.h2database/h2
