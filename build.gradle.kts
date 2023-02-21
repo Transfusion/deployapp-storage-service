@@ -101,3 +101,9 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.getByName<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    if (project.hasProperty("jvmArgs")) {
+        jvmArgs = project.property("jvmArgs").toString().split("\\s+".toRegex()).toList()
+    }
+}
