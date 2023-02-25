@@ -83,7 +83,14 @@ public class StorageService {
 
     public static CustomFTPClient getFTPClient(FtpCredential ftpCreds) throws IOException, AuthenticationException {
         CustomFTPClient client = new CustomFTPClient();
+        client.setConnectTimeout(60000);
         client.connect(ftpCreds.getServer(), ftpCreds.getPort());
+        // https://stackoverflow.com/questions/29848713/how-to-use-socket-setsotimeout
+        client.setSoTimeout(60000);
+        client.setDataTimeout(60000);
+        // https://stackoverflow.com/questions/21294253/commons-ftpclient-storefile-hangs-if-ftp-server-becomes-unavailable
+        client.setControlKeepAliveTimeout(60); // 60 SECONDS
+
         if (!client.login(ftpCreds.getUsername(), ftpCreds.getPassword()))
             throw new AuthenticationException(String.format("Login failed to server %s port %d", ftpCreds.getServer(), ftpCreds.getPort()));
         client.makeDirectory(getFtpPublicPrefixDirectory(ftpCreds.getDirectory()));
