@@ -7,6 +7,11 @@ plugins {
     kotlin("plugin.spring") version "1.6.21"
     kotlin("plugin.jpa") version "1.6.21"
     id("maven-publish")
+    id("com.gorylenko.gradle-git-properties") version "2.4.1"
+}
+
+gitProperties {
+    failOnNoGitDirectory = false
 }
 
 group = "io.github.transfusion"

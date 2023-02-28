@@ -22,6 +22,7 @@ public class CorsAndStaticConfig {
     @Value("${custom_cors.origins}")
     private List<String> corsOrigins;
 
+    // /actuator/** CORS configuration is done in the application properties
     @Bean
     public WebMvcConfigurer corsConfigurer() {
 
