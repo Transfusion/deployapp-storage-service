@@ -236,10 +236,11 @@ public class StorageService {
     @Autowired
     private JobScheduler jobScheduler;
 
-    public void deleteStorageCredential(StorageCredential credential) throws Exception {
-        credential.resolveDeleter(deleterResolver).deleteStorageCredential();
-        storageCredsUpdateService.deleteCredential(credential.getId());
-    }
+//    see below
+//    public void deleteStorageCredential(StorageCredential credential) throws Exception {
+//        credential.resolveDeleter(deleterResolver).deleteStorageCredential();
+//        storageCredsUpdateService.deleteCredential(credential.getId());
+//    }
 
     /**
      * Nukes everything DeployApp-related stored using the given credential.
@@ -259,7 +260,9 @@ public class StorageService {
         }
 
         logger.info("storage credential {} successfully obtained", storageCredentialId);
-        jobScheduler.enqueue(() -> deleteStorageCredential(credential));
+        //        https://github.com/Transfusion/deployapp-backend/issues/2
+        storageCredsUpdateService.deleteCredential(credential.getId());
+//        jobScheduler.enqueue(() -> deleteStorageCredential(credential));
 //            TODO: fill in other credential methods
     }
 }
