@@ -15,7 +15,7 @@ gitProperties {
 }
 
 group = "io.github.transfusion"
-version = "0.0.1-SNAPSHOT"
+version = "1.0.0-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
@@ -105,6 +105,10 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.bootJar {
+    archiveFileName.set("deployapp-storage-service.jar")
 }
 
 tasks.getByName<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
