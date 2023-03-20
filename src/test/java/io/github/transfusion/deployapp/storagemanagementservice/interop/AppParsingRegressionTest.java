@@ -1,15 +1,14 @@
 package io.github.transfusion.deployapp.storagemanagementservice.interop;
 
 import io.github.transfusion.app_info_java_graalvm.AppInfo.IPA;
-import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapperImpl;
+import io.github.transfusion.deployapp.utilities.GraalPolyglot;
 import org.graalvm.polyglot.Context;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.test.annotation.DirtiesContext;
@@ -23,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 //@Import(value = {AppDetailsMapper.class})
 @ExtendWith({SpringExtension.class, MockitoExtension.class})
-@Import({Jackson2ObjectMapperBuilder.class, GraalPolyglotConfig.class})
+@Import({Jackson2ObjectMapperBuilder.class})
 @ContextConfiguration(classes = {
         AppDetailsMapperImpl.class,
 })
@@ -33,20 +32,17 @@ public class AppParsingRegressionTest {
     @Autowired
     private AppDetailsMapper appDetailsMapper;
 
-    @Autowired
-    @Qualifier("polyglotContext")
-    private Context polyglotCtx;
-
     @Test
     public void infoPlistWithBinaryData() {
         UUID uuid = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         UUID storageCredentialId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab");
 
-        Context ctx = polyglotCtx;
-        String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
-        String absolutePath = getResourcesAbsolutePath(resourceName);
-        IPA subject = IPA.from(ctx, absolutePath);
+        try (Context ctx = GraalPolyglot.newPolyglotContext()) {
+            String resourceName = "apps/NineAnimator_1.2.7_1672916973.ipa";
+            String absolutePath = getResourcesAbsolutePath(resourceName);
+            IPA subject = IPA.from(ctx, absolutePath);
 
-        assertDoesNotThrow(() -> appDetailsMapper.mapPolyglotIPAtoIpa(subject, uuid, storageCredentialId, "sample.filename"));
+            assertDoesNotThrow(() -> appDetailsMapper.mapPolyglotIPAtoIpa(subject, uuid, storageCredentialId, "sample.filename"));
+        }
     }
 }

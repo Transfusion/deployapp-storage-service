@@ -15,7 +15,6 @@ gitProperties {
 }
 
 group = "io.github.transfusion"
-version = "1.0.0-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {

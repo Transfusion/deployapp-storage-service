@@ -6,7 +6,6 @@ import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUs
 import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomGlobalMethodSecurityConfiguration;
 import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomPermissionEvaluator;
 import io.github.transfusion.deployapp.storagemanagementservice.config.AsyncExecutionConfig;
-import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.AppController;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.PublicUtilityController;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.WebSecurityConfig;
@@ -46,7 +45,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -85,7 +83,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
         "io.github.transfusion.deployapp.storagemanagementservice.mappers"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Import({WebSecurityConfig.class,
-        GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
+        Jackson2ObjectMapperBuilder.class,
         StorageCredentialMapperImpl.class,
         StorageCredsUpdateService.class,
         StorageService.class,

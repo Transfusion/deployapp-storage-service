@@ -5,7 +5,6 @@ import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
 import io.github.transfusion.deployapp.storagemanagementservice.config.AsyncExecutionConfig;
-import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.MockCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.StorageCredentialRepository;
@@ -87,7 +86,7 @@ import static org.springframework.data.jpa.domain.Specification.where;
         "io.github.transfusion.deployapp.storagemanagementservice.services.assets",
         "io.github.transfusion.deployapp.storagemanagementservice.mappers"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Import({GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
+@Import({Jackson2ObjectMapperBuilder.class,
         StorageCredentialMapperImpl.class,
         StorageCredsUpdateService.class,
         StorageService.class,

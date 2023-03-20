@@ -3,18 +3,14 @@ package io.github.transfusion.deployapp.storagemanagementservice.services.initia
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.session.SessionData;
-import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinaryStoreJob;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryStoreJobRepository;
-//import io.github.transfusion.deployapp.storagemanagementservice.services.AMQPBindingsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.storage.IUploader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.security.core.Authentication;
@@ -116,22 +112,16 @@ public class AppBinaryInitialStoreService {
 //    @Autowired
 //    private AMQPBindingsService amqpBindingsService;
 
-    public AppBinaryStoreJob storeAppBinary(AppBinary appBinary,
+    public AppBinaryStoreJob storeAppBinary(UUID appBinaryId,
                                             UUID storageCredentialId,
                                             Instant credentialCreatedOn,
                                             String name, File object) throws JsonProcessingException {
-        AppBinaryStoreJob storeJob = new AppBinaryStoreJob();
-        storeJob.setAppBinary(appBinary);
-        storeJob.setCreatedDate(Instant.now());
-        storeJob.setStatus(InitialStoreStatus.PROCESSING);
-
-        AppBinaryStoreJob job = appBinaryStoreJobRepository.save(storeJob);
+        AppBinaryStoreJob job = transactionalWrapperService.createAppBinaryStoreJob(appBinaryId);
         // fire off async retryable
 //        CompletableFuture<Void> future = asyncService.uploadPrivateAppBinaryObject(jobId, storageCredentialId, credentialCreatedOn, appBinary.getId(),
 //                name, object);
 
         UUID jobId = job.getId();
-        UUID appBinaryId = appBinary.getId();
 //        amqpBindingsService.addDirectBinding(jobId);
 
         IUploader uploader = storageService.resolveUploader(storageCredentialId,

@@ -21,10 +21,12 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.specification
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
+import io.github.transfusion.deployapp.utilities.GraalPolyglot;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
 import org.jobrunr.scheduling.JobScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +37,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -46,6 +49,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 
 @Service
@@ -72,8 +76,8 @@ public class AppBinaryService {
     } */
 
     @Autowired
-    @Qualifier("polyglotContext")
-    private Context polyglotCtx;
+    @Qualifier("polyglotEngine")
+    private Engine polyglotEngine;
 
     @Autowired
     private AppBinaryInitialStoreService appBinaryInitialStoreService;
@@ -127,6 +131,10 @@ public class AppBinaryService {
 //        return appBinaryRecord;
 //    }
 
+    @Autowired
+    @Qualifier("threadPoolTaskExecutor")
+    private ThreadPoolTaskExecutor parsingThreadPoolTaskExecutor;
+
     /**
      * @param storageCredentialId UUID in storage_credentials
      * @param credentialCreatedOn ISO8601 timestamp
@@ -143,10 +151,13 @@ public class AppBinaryService {
             userId = ((CustomUserPrincipal) authentication.getPrincipal()).getId();
         }
 
+        UUID id = UUID.randomUUID();
+
+        // if this throws an exception then the context will still be closed.
+        AppBinary appBinary = parsingThreadPoolTaskExecutor.submit(() -> {
+            try (Context polyglotCtx = GraalPolyglot.newPolyglotContext(polyglotEngine)) {
         AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
         AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
-
-        UUID id = UUID.randomUUID();
 
         AppBinary res; // the parsed and saved binary
 
@@ -155,16 +166,17 @@ public class AppBinaryService {
             Ipa ipa = appDetailsMapper.mapPolyglotIPAtoIpa((IPA) data, id, storageCredentialId, binary.getName());
             ipa.setUserId(userId);
             ((IPA) data).clear();
-            res = ipaRepository.save(ipa);
+                    res = ipaRepository.saveAndFlush(ipa);
             // perform the actual upload asynchronously.
-            appBinaryInitialStoreService.storeAppBinary(res, storageCredentialId,
+                    appBinaryInitialStoreService.storeAppBinary(ipa.getId(), storageCredentialId,
                     credentialCreatedOn, "binary.ipa", binary);
 
         } else if (data instanceof APK) {
 //            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
             Apk apk = appDetailsMapper.mapPolyglotAPKtoApk((APK) data, id, storageCredentialId, binary.getName());
             apk.setUserId(userId);
-            res = apkRepository.save(apk);
+                    ((APK) data).clear();
+                    res = apkRepository.saveAndFlush(apk);
 
             for (Iterator<ApkCert> it = Arrays.stream(((APK) data).certificates())
                     .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
@@ -176,7 +188,7 @@ public class AppBinaryService {
             }
 
             // perform the actual upload asynchronously
-            appBinaryInitialStoreService.storeAppBinary(res, storageCredentialId,
+                    appBinaryInitialStoreService.storeAppBinary(apk.getId(), storageCredentialId,
                     credentialCreatedOn, "binary.apk", binary);
         } else {
             throw new IllegalArgumentException("Only IPA and APK files supported for now.");
@@ -186,6 +198,12 @@ public class AppBinaryService {
             sessionData.getAnonymousAppBinaries().add(res.getId());
 
         return res;
+            } finally {
+                System.gc();
+            }
+            // end of try-with-resources block
+        }).get();
+        return appBinary;
     }
 
 

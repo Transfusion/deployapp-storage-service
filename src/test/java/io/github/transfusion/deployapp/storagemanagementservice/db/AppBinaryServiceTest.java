@@ -3,7 +3,6 @@ package io.github.transfusion.deployapp.storagemanagementservice.db;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.transfusion.deployapp.dto.response.AppBinaryDTO;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
-import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.Ipa;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppBinaryMapper;
@@ -48,7 +47,7 @@ import static org.hamcrest.collection.IsIn.isIn;
 @ActiveProfiles({"db-test"})
 @ExtendWith({SpringExtension.class, MockitoExtension.class})
 @DataJpaTest(properties = {"spring.main.allow-bean-definition-overriding=true"})
-@Import({GraalPolyglotConfig.class, Jackson2ObjectMapperBuilder.class,
+@Import({Jackson2ObjectMapperBuilder.class,
 
         StorageCredentialMapperImpl.class,
         StorageCredsUpdateService.class,
