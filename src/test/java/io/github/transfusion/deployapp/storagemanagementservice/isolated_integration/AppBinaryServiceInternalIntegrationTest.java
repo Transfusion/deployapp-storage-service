@@ -4,7 +4,9 @@ import io.github.transfusion.deployapp.Constants;
 import io.github.transfusion.deployapp.auth.CustomUserPrincipal;
 import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
+import io.github.transfusion.deployapp.storagemanagementservice.config.AppBinaryServiceConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.config.AsyncExecutionConfig;
+import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.AppBinary;
 import io.github.transfusion.deployapp.storagemanagementservice.db.entities.MockCredential;
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.StorageCredentialRepository;
@@ -17,11 +19,14 @@ import io.github.transfusion.deployapp.storagemanagementservice.services.Storage
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.TransactionalWrapperService;
+import org.jobrunr.scheduling.JobScheduler;
+import org.jobrunr.spring.autoconfigure.JobRunrAutoConfiguration;
+import org.jobrunr.spring.autoconfigure.metrics.JobRunrMetricsAutoConfiguration;
+import org.jobrunr.spring.autoconfigure.storage.JobRunrSqlStorageAutoConfiguration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -32,6 +37,7 @@ import org.springframework.boot.jdbc.EmbeddedDatabaseConnection;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureDataJpa;
 import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
+import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -40,32 +46,30 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.retry.support.RetryTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.session.MapSessionRepository;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.collection.IsIn.isIn;
-
 import java.io.File;
-import java.lang.annotation.Annotation;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static io.github.transfusion.deployapp.storagemanagementservice.Utilities.getResourcesAbsolutePath;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsIn.isIn;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.data.jpa.domain.Specification.where;
 
@@ -73,7 +77,14 @@ import static org.springframework.data.jpa.domain.Specification.where;
 @ExtendWith({SpringExtension.class, /*MockitoExtension.class*/})
 //@DataJpaTest
 @WebAppConfiguration
-@EnableAutoConfiguration(exclude = {FlywayAutoConfiguration.class, RedisAutoConfiguration.class})
+@ContextConfiguration(
+        classes = {GraalPolyglotConfig.class},
+        initializers = {ConfigDataApplicationContextInitializer.class})
+@EnableAutoConfiguration(exclude = {FlywayAutoConfiguration.class, RedisAutoConfiguration.class,
+        JobRunrAutoConfiguration.class,
+        JobRunrMetricsAutoConfiguration.class,
+        JobRunrSqlStorageAutoConfiguration.class,
+})
 @AutoConfigureDataJpa
 @AutoConfigureTestEntityManager
 @AutoConfigureTestDatabase(connection = EmbeddedDatabaseConnection.H2)
@@ -91,6 +102,7 @@ import static org.springframework.data.jpa.domain.Specification.where;
         StorageCredsUpdateService.class,
         StorageService.class,
         AppBinaryService.class,
+        AppBinaryServiceConfig.class,
 
 //        not actually going to be called, included to avoid NoSuchBeanDefinitionException.
         AsyncExecutionConfig.class,
@@ -104,6 +116,12 @@ public class AppBinaryServiceInternalIntegrationTest {
 
     //    @TestConfiguration
     public static class TestConfig {
+        @Bean
+        @Primary
+        public JobScheduler jobScheduler() {
+            return Mockito.mock(JobScheduler.class);
+        }
+
         @Bean
         @Qualifier("MainServiceWebClient")
         @Primary
@@ -121,6 +139,12 @@ public class AppBinaryServiceInternalIntegrationTest {
         @Primary
         public AppBinaryInitialStoreService appBinaryInitialStoreService() {
             return Mockito.mock(AppBinaryInitialStoreService.class);
+        }
+
+        //        https://stackoverflow.com/questions/54249580/spring-session-with-in-memory-store
+        @Bean
+        public MapSessionRepository sessionRepository() {
+            return new MapSessionRepository(new ConcurrentHashMap<>());
         }
 
     }

@@ -104,6 +104,7 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    maxHeapSize = "8192m"
 }
 
 tasks.bootJar {

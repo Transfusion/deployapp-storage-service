@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jobrunr.jobs.JobId;
 import org.jobrunr.scheduling.JobScheduler;
-import org.jobrunr.storage.StorageProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -242,9 +241,6 @@ public class AppController {
 
     @Autowired
     private JobScheduler jobScheduler;
-
-    @Autowired
-    private StorageProvider storageProvider;
 
     @PreAuthorize("hasPermission(#id, 'APPBINARY_EDIT')")
     @PostMapping("/binary/{id}/generateAsset")

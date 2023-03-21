@@ -5,7 +5,9 @@ import io.github.transfusion.deployapp.session.SessionData;
 import io.github.transfusion.deployapp.storagemanagementservice.WithMockCustomUser;
 import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomGlobalMethodSecurityConfiguration;
 import io.github.transfusion.deployapp.storagemanagementservice.auth.CustomPermissionEvaluator;
+import io.github.transfusion.deployapp.storagemanagementservice.config.AppBinaryServiceConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.config.AsyncExecutionConfig;
+import io.github.transfusion.deployapp.storagemanagementservice.config.GraalPolyglotConfig;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.AppController;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.PublicUtilityController;
 import io.github.transfusion.deployapp.storagemanagementservice.controller.WebSecurityConfig;
@@ -17,6 +19,10 @@ import io.github.transfusion.deployapp.storagemanagementservice.mappers.StorageC
 import io.github.transfusion.deployapp.storagemanagementservice.services.*;
 import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.TransactionalWrapperService;
+import org.jobrunr.scheduling.JobScheduler;
+import org.jobrunr.spring.autoconfigure.JobRunrAutoConfiguration;
+import org.jobrunr.spring.autoconfigure.metrics.JobRunrMetricsAutoConfiguration;
+import org.jobrunr.spring.autoconfigure.storage.JobRunrSqlStorageAutoConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +39,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureDataJpa;
 import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -44,7 +51,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.session.MapSessionRepository;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -59,17 +69,25 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static io.github.transfusion.deployapp.storagemanagementservice.Utilities.getResourcesAbsolutePath;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
-//@ActiveProfiles("db-test")
+@ActiveProfiles("permission-test")
 @ExtendWith({SpringExtension.class, /*MockitoExtension.class*/})
 //@DataJpaTest
 @AutoConfigureMockMvc
 @WebAppConfiguration
-@EnableAutoConfiguration(exclude = {FlywayAutoConfiguration.class, RedisAutoConfiguration.class})
+@ContextConfiguration(
+        classes = {GraalPolyglotConfig.class},
+        initializers = {ConfigDataApplicationContextInitializer.class})
+@EnableAutoConfiguration(exclude = {FlywayAutoConfiguration.class, RedisAutoConfiguration.class,
+        JobRunrAutoConfiguration.class,
+        JobRunrMetricsAutoConfiguration.class,
+        JobRunrSqlStorageAutoConfiguration.class
+})
 @AutoConfigureDataJpa
 @AutoConfigureTestEntityManager
 @AutoConfigureTestDatabase(connection = EmbeddedDatabaseConnection.H2)
@@ -88,6 +106,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
         StorageCredsUpdateService.class,
         StorageService.class,
         AppBinaryService.class,
+        AppBinaryServiceConfig.class,
 
         //        not actually going to be called, included to avoid NoSuchBeanDefinitionException.
         AsyncExecutionConfig.class,
@@ -108,6 +127,12 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 public class PermissionEvaluatorInternalIntegrationTest {
 
     public static class TestConfig {
+        @Bean
+        @Primary
+        public JobScheduler jobScheduler() {
+            return Mockito.mock(JobScheduler.class);
+        }
+
         @Bean
         @Qualifier("MainServiceWebClient")
         @Primary
@@ -131,6 +156,12 @@ public class PermissionEvaluatorInternalIntegrationTest {
         @Primary
         public AppBinaryInitialStoreService appBinaryInitialStoreService() {
             return Mockito.mock(AppBinaryInitialStoreService.class);
+        }
+
+        //        https://stackoverflow.com/questions/54249580/spring-session-with-in-memory-store
+        @Bean
+        public MapSessionRepository sessionRepository() {
+            return new MapSessionRepository(new ConcurrentHashMap<>());
         }
 
         @Bean

@@ -156,53 +156,52 @@ public class AppBinaryService {
         // if this throws an exception then the context will still be closed.
         AppBinary appBinary = parsingThreadPoolTaskExecutor.submit(() -> {
             try (Context polyglotCtx = GraalPolyglot.newPolyglotContext(polyglotEngine)) {
-        AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
-        AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
+                AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
+                AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
 
-        AppBinary res; // the parsed and saved binary
+                AppBinary res; // the parsed and saved binary
 
-        if (data instanceof IPA) {
+                if (data instanceof IPA) {
 //            Ipa ipa = storeIPA(storageCredentialId, credentialCreatedOn, binary, (IPA) data);
-            Ipa ipa = appDetailsMapper.mapPolyglotIPAtoIpa((IPA) data, id, storageCredentialId, binary.getName());
-            ipa.setUserId(userId);
-            ((IPA) data).clear();
+                    Ipa ipa = appDetailsMapper.mapPolyglotIPAtoIpa((IPA) data, id, storageCredentialId, binary.getName());
+                    ipa.setUserId(userId);
+                    ((IPA) data).clear();
                     res = ipaRepository.saveAndFlush(ipa);
-            // perform the actual upload asynchronously.
+                    // perform the actual upload asynchronously.
                     appBinaryInitialStoreService.storeAppBinary(ipa.getId(), storageCredentialId,
-                    credentialCreatedOn, "binary.ipa", binary);
+                            credentialCreatedOn, "binary.ipa", binary);
 
-        } else if (data instanceof APK) {
-//            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
-            Apk apk = appDetailsMapper.mapPolyglotAPKtoApk((APK) data, id, storageCredentialId, binary.getName());
-            apk.setUserId(userId);
+                } else if (data instanceof APK) {
+                    //            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
+                    Apk apk = appDetailsMapper.mapPolyglotAPKtoApk((APK) data, id, storageCredentialId, binary.getName());
+                    apk.setUserId(userId);
                     ((APK) data).clear();
                     res = apkRepository.saveAndFlush(apk);
 
-            for (Iterator<ApkCert> it = Arrays.stream(((APK) data).certificates())
-                    .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
-                    .iterator(); it.hasNext(); ) {
-                ApkCert cert = it.next();
-                cert.setId(UUID.randomUUID());
-                cert.setAppBinary(res);
-                apkCertRepository.save(cert);
-            }
+                    for (Iterator<ApkCert> it = Arrays.stream(((APK) data).certificates())
+                            .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
+                            .iterator(); it.hasNext(); ) {
+                        ApkCert cert = it.next();
+                        cert.setId(UUID.randomUUID());
+                        cert.setAppBinary(res);
+                        apkCertRepository.save(cert);
+                    }
 
-            // perform the actual upload asynchronously
+                    // perform the actual upload asynchronously
                     appBinaryInitialStoreService.storeAppBinary(apk.getId(), storageCredentialId,
-                    credentialCreatedOn, "binary.apk", binary);
-        } else {
-            throw new IllegalArgumentException("Only IPA and APK files supported for now.");
-        }
-
-        if (authentication instanceof AnonymousAuthenticationToken)
-            sessionData.getAnonymousAppBinaries().add(res.getId());
-
-        return res;
+                            credentialCreatedOn, "binary.apk", binary);
+                } else {
+                    throw new IllegalArgumentException("Only IPA and APK files supported for now.");
+                }
+                return res;
             } finally {
                 System.gc();
             }
             // end of try-with-resources block
         }).get();
+//        https://stackoverflow.com/questions/39324982/spring-boot-scope-request-is-not-active-for-the-current-thread-in-asynch-me
+        if (authentication instanceof AnonymousAuthenticationToken)
+            sessionData.getAnonymousAppBinaries().add(appBinary.getId());
         return appBinary;
     }
 
