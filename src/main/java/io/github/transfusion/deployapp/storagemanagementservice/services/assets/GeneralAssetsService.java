@@ -11,10 +11,8 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.
 import io.github.transfusion.deployapp.storagemanagementservice.db.repositories.AppBinaryRepository;
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
-import io.github.transfusion.deployapp.utilities.GraalPolyglot;
 import org.apache.commons.lang3.NotImplementedException;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -23,19 +21,17 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants.GENERAL_ASSET.PUBLIC_ICON;
+import static io.github.transfusion.deployapp.utilities.GraalPolyglot.cleanUpRubyContext;
 
 @Service
 public class GeneralAssetsService {
 
     @Autowired
-    @Qualifier("polyglotEngine")
-    private Engine polyglotEngine;
+    @Qualifier("polyglotContext")
+    private Context polyglotCtx;
 
     @Autowired
     private AppBinaryRepository appBinaryRepository;
@@ -50,86 +46,88 @@ public class GeneralAssetsService {
         UUID appBinaryId = binary.getId();
         File tempFile = storageService.downloadPrivateAppBinaryObject(binary.getStorageCredential(), Instant.now(), appBinaryId, "binary.ipa");
 
-        try (Context polyglotCtx = GraalPolyglot.newPolyglotContext(polyglotEngine)) {
-            // now use app-info-graalvm to get our desired asset...
-            AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
-            AbstractPolyglotAdapter data = appInfo.parse_(tempFile.getAbsolutePath());
-            if (!(data instanceof IPA))
-                throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an IPA", appBinaryId));
+        // now use app-info-graalvm to get our desired asset...
+        AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
+        AbstractPolyglotAdapter data = appInfo.parse_(tempFile.getAbsolutePath());
+        if (!(data instanceof IPA))
+            throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an IPA", appBinaryId));
 
-            IPAIconHash[] icons = ((IPA) data).icons_(true);
-            if (icons == null || icons.length == 0)
-                throw new RuntimeException(String.format("The stored AppBinary with ID %s has no icons", appBinaryId));
+        List<IPAIconHash> icons = ((IPA) data).icons_(true);
+        if (icons == null || icons.size() == 0)
+            throw new RuntimeException(String.format("The stored AppBinary with ID %s has no icons", appBinaryId));
 
-            // find the largest icon
-            Arrays.sort(icons, Comparator.<IPAIconHash>comparingLong(i -> i.dimensions()[0]).reversed());
+        // find the largest icon
+        icons.sort(Comparator.<IPAIconHash>comparingLong(i -> i.dimensions()[0]).reversed());
 
-            String iconName = icons[0].name();
-            // noticed .uncrushed_file() being null and .file() being already uncrushed in the wild
-            File iconFile = new File(icons[0].uncrushed_file() != null ? icons[0].uncrushed_file() : icons[0].file());
-            storageService.uploadPublicAppBinaryObject(binary.getStorageCredential(),
-                    Instant.now(),
-                    appBinaryId,
-                    iconName, iconFile);
+        String iconName = icons.get(0).name();
+        // noticed .uncrushed_file() being null and .file() being already uncrushed in the wild
+        File iconFile = new File(icons.get(0).uncrushed_file() != null ? icons.get(0).uncrushed_file() : icons.get(0).file());
+        storageService.uploadPublicAppBinaryObject(binary.getStorageCredential(),
+                Instant.now(),
+                appBinaryId,
+                iconName, iconFile);
 
             // record in DB
 
-            // delete all existing PUBLIC_ICONs
-            appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, PUBLIC_ICON.toString());
+        // delete all existing PUBLIC_ICONs
+        appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, PUBLIC_ICON.toString());
 
-            AppBinaryAsset asset = new AppBinaryAsset();
-            asset.setFileName(iconName);
-            asset.setId(UUID.randomUUID());
-            asset.setAppBinary(binary);
-            asset.setType(PUBLIC_ICON.toString());
-            asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
-            asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
+        AppBinaryAsset asset = new AppBinaryAsset();
+        asset.setFileName(iconName);
+        asset.setId(UUID.randomUUID());
+        asset.setAppBinary(binary);
+        asset.setType(PUBLIC_ICON.toString());
+        asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
+        asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
 
-            return asset;
-        }
+        ((IPA) data).clear();
+        cleanUpRubyContext(polyglotCtx);
+
+        return asset;
     }
 
     private AppBinaryAsset generateAPKPublicIcon(Apk binary) throws Exception {
         UUID appBinaryId = binary.getId();
         File tempFile = storageService.downloadPrivateAppBinaryObject(binary.getStorageCredential(), Instant.now(), appBinaryId, "binary.apk");
 
-        try (Context polyglotCtx = GraalPolyglot.newPolyglotContext(polyglotEngine)) {
-            // now use app-info-graalvm to get our desired asset...
-            AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
-            AbstractPolyglotAdapter data = appInfo.parse_(tempFile.getAbsolutePath());
-            if (!(data instanceof APK))
-                throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an APK", appBinaryId));
+        // now use app-info-graalvm to get our desired asset...
+        AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
+        AbstractPolyglotAdapter data = appInfo.parse_(tempFile.getAbsolutePath());
+        if (!(data instanceof APK))
+            throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an APK", appBinaryId));
 
-            AndroidIconHash[] icons = ((APK) data).icons();
-            if (icons == null || icons.length == 0)
-                throw new RuntimeException(String.format("The stored AppBinary with ID %s has no icons", appBinaryId));
+        List<AndroidIconHash> icons = ((APK) data).icons_();
+        if (icons == null || icons.size() == 0)
+            throw new RuntimeException(String.format("The stored AppBinary with ID %s has no icons", appBinaryId));
 
-            // find the largest icon ( AndroidIconHash.dimensions() sometimes returns null in the wild )
-            Arrays.sort(icons, Comparator.<AndroidIconHash>comparingLong(i -> i.dimensions() == null ? 0 : i.dimensions()[0]).reversed());
+        // find the largest icon ( AndroidIconHash.dimensions() sometimes returns null in the wild )
+        icons.sort(Comparator.<AndroidIconHash>comparingLong(i -> i.dimensions() == null ? 0 : i.dimensions()[0]).reversed());
 
-            String iconName = icons[0].name();
-            // noticed .uncrushed_file() being null and .file() being already uncrushed in the wild
-            File iconFile = new File(icons[0].file());
-            storageService.uploadPublicAppBinaryObject(binary.getStorageCredential(),
-                    Instant.now(),
-                    appBinaryId,
-                    iconName, iconFile);
+        String iconName = icons.get(0).name();
+        // noticed .uncrushed_file() being null and .file() being already uncrushed in the wild
+        File iconFile = new File(icons.get(0).file());
+        storageService.uploadPublicAppBinaryObject(binary.getStorageCredential(),
+                Instant.now(),
+                appBinaryId,
+                iconName, iconFile);
 
-            // record in DB
+        // record in DB
 
-            // delete all existing PUBLIC_ICONs
-            appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, PUBLIC_ICON.toString());
+        // delete all existing PUBLIC_ICONs
+        appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, PUBLIC_ICON.toString());
 
-            AppBinaryAsset asset = new AppBinaryAsset();
-            asset.setFileName(iconName);
-            asset.setId(UUID.randomUUID());
-            asset.setAppBinary(binary);
-            asset.setType(PUBLIC_ICON.toString());
-            asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
-            asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
+        AppBinaryAsset asset = new AppBinaryAsset();
+        asset.setFileName(iconName);
+        asset.setId(UUID.randomUUID());
+        asset.setAppBinary(binary);
+        asset.setType(PUBLIC_ICON.toString());
+        asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
+        asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
 
-            return asset;
-        }
+        ((APK) data).clear();
+        cleanUpRubyContext(polyglotCtx);
+
+        return asset;
     }
 
     private AppBinaryAsset generatePublicIcon(UUID appBinaryId) throws Exception {

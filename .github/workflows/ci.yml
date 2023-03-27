@@ -10,14 +10,17 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/graalvm/graalvm-ce:ol8-java11-22.3.0
     steps:
-      - name: Install Git
-        run: |
-          microdnf install git -y
-      - name: Setup Ruby
-        run: gu install ruby && /opt/graalvm-ce-java11-22.3.0/languages/ruby/lib/truffle/post_install_hook.sh && gem install app-info
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          version: 'dev'
+          java-version: '17'
+          components: 'native-image,ruby'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Install app_info gem
+        run: gem install app-info -v 2.8.3
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -72,7 +75,7 @@ jobs:
           GPR_PAT: ${{ secrets.GITHUB_TOKEN }}
 
   docker-image:
-    needs: [unit-tests, integration-tests]
+    # needs: [unit-tests, integration-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -81,8 +84,8 @@ jobs:
 
       - uses: graalvm/setup-graalvm@v1
         with:
-          version: '22.3.1'
-          java-version: '11'
+          version: 'dev'
+          java-version: '17'
           components: 'native-image,ruby'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           native-image-job-reports: 'true'

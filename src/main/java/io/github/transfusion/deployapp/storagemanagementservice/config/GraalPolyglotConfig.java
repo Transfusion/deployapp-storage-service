@@ -1,5 +1,7 @@
 package io.github.transfusion.deployapp.storagemanagementservice.config;
 
+import io.github.transfusion.deployapp.utilities.GraalPolyglot;
+import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Bean;
@@ -20,6 +22,12 @@ public class GraalPolyglotConfig {
     @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
     Engine polyglotEngine() {
         return Engine.newBuilder().build();
+    }
+
+    @Bean
+    @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
+    Context polyglotContext() {
+        return GraalPolyglot.newPolyglotContext(polyglotEngine());
     }
 
 }

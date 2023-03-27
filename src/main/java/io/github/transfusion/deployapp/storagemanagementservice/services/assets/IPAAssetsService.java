@@ -14,9 +14,7 @@ import io.github.transfusion.deployapp.storagemanagementservice.mappers.MobilePr
 import io.github.transfusion.deployapp.storagemanagementservice.services.AppBinaryJobService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageCredsUpdateService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.StorageService;
-import io.github.transfusion.deployapp.utilities.GraalPolyglot;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +29,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static io.github.transfusion.deployapp.storagemanagementservice.services.assets.Constants.IPA_ASSET.MOBILEPROVISION;
+import static io.github.transfusion.deployapp.utilities.GraalPolyglot.cleanUpRubyContext;
 
 @Service
 public class IPAAssetsService {
@@ -53,8 +52,8 @@ public class IPAAssetsService {
     private StorageCredsUpdateService storageCredsUpdateService;
 
     @Autowired
-    @Qualifier("polyglotEngine")
-    private Engine polyglotEngine;
+    @Qualifier("polyglotContext")
+    private Context polyglotCtx;
 
     @Autowired
     private MobileProvisionMapper mobileProvisionMapper;
@@ -87,59 +86,59 @@ public class IPAAssetsService {
         // once we have the temp file, we have its path on disk also
         File tempFile = storageService.downloadPrivateAppBinaryObject(binary.getStorageCredential(), Instant.now(), appBinaryId, "binary.ipa");
 
-        try (Context polyglotCtx = GraalPolyglot.newPolyglotContext(polyglotEngine)) {
-            // now use app-info-graalvm to get our desired asset...
-            AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
-            AbstractPolyglotAdapter data = appInfo.parse_(tempFile.getAbsolutePath());
-            if (!(data instanceof IPA))
-                throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an IPA", appBinaryId));
+        // now use app-info-graalvm to get our desired asset...
+        AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
+        AbstractPolyglotAdapter data = appInfo.parse_(tempFile.getAbsolutePath());
+        if (!(data instanceof IPA))
+            throw new RuntimeException(String.format("The stored AppBinary with ID %s is not actually an IPA", appBinaryId));
 
-            if (!((IPA) data).mobileprovision_question()) {
-                logger.error("ipa with appbinary id {} doesn't contain a mobileprovision!", appBinaryId);
-                // save a placeholder
-                AppBinaryAsset asset = new AppBinaryAsset();
-//            asset.setFileName(mobileProvisionFile.getName());
-                asset.setId(UUID.randomUUID());
-                asset.setAppBinary(binary);
-                asset.setType(MOBILEPROVISION.toString());
-                asset.setDescription("Extraction FAILED.");
-                asset.setStatus(Constants.ASSET_STATUS.FAILED.toString());
-                asset = appBinaryAssetRepository.save(asset);
-                return asset;
-            }
-
-
-            File mobileProvisionFile = new File(((IPA) data).mobileprovision_path());
-            // upload back to the storage
-            storageService.uploadPrivateAppBinaryObject(binary.getStorageCredential(),
-                    Instant.now(),
-                    appBinaryId,
-                    mobileProvisionFile.getName(), mobileProvisionFile);
-
-            // record in DB
-
-            // delete all existing MOBILEPROVISIONs
-            appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, MOBILEPROVISION.toString());
-            ipaMobileprovisionRepository.deleteByAppBinaryId(appBinaryId);
-
+        if (!((IPA) data).mobileprovision_question()) {
+            logger.error("ipa with appbinary id {} doesn't contain a mobileprovision!", appBinaryId);
+            // save a placeholder
             AppBinaryAsset asset = new AppBinaryAsset();
-            asset.setFileName(mobileProvisionFile.getName());
+//            asset.setFileName(mobileProvisionFile.getName());
             asset.setId(UUID.randomUUID());
             asset.setAppBinary(binary);
             asset.setType(MOBILEPROVISION.toString());
-            asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
-            asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
-
-            // and the actual mobileprovision info too for preview purposes...
-            IpaMobileprovision mobileProvision = mobileProvisionMapper.mapPolyglotMobileProvisionToIpaMobileProvision(((IPA) data).mobileprovision());
-            mobileProvision.setId(UUID.randomUUID());
-            mobileProvision.setIpa((Ipa) binary);
-            ipaMobileprovisionRepository.save(mobileProvision);
-
-            logger.info("mobileprovision gen done " + binary.getId());
-
+            asset.setDescription("Extraction FAILED.");
+            asset.setStatus(Constants.ASSET_STATUS.FAILED.toString());
+            asset = appBinaryAssetRepository.save(asset);
             return asset;
         }
+
+
+        File mobileProvisionFile = new File(((IPA) data).mobileprovision_path());
+        // upload back to the storage
+        storageService.uploadPrivateAppBinaryObject(binary.getStorageCredential(),
+                Instant.now(),
+                appBinaryId,
+                mobileProvisionFile.getName(), mobileProvisionFile);
+
+        // record in DB
+
+        // delete all existing MOBILEPROVISIONs
+        appBinaryAssetRepository.deleteByAppBinaryIdAndType(appBinaryId, MOBILEPROVISION.toString());
+        ipaMobileprovisionRepository.deleteByAppBinaryId(appBinaryId);
+
+        AppBinaryAsset asset = new AppBinaryAsset();
+        asset.setFileName(mobileProvisionFile.getName());
+        asset.setId(UUID.randomUUID());
+        asset.setAppBinary(binary);
+        asset.setType(MOBILEPROVISION.toString());
+        asset.setStatus(Constants.ASSET_STATUS.SUCCESS.toString());
+        asset = appBinaryAssetRepository.save(asset); // optimize for reentrancy
+
+        // and the actual mobileprovision info too for preview purposes...
+        IpaMobileprovision mobileProvision = mobileProvisionMapper.mapPolyglotMobileProvisionToIpaMobileProvision(((IPA) data).mobileprovision());
+        mobileProvision.setId(UUID.randomUUID());
+        mobileProvision.setIpa((Ipa) binary);
+        ipaMobileprovisionRepository.save(mobileProvision);
+
+        logger.info("mobileprovision gen done " + binary.getId());
+
+        cleanUpRubyContext(polyglotCtx);
+
+        return asset;
     }
 
     public List<IpaMobileprovision> getIpaMobileprovisions(UUID appBinaryId) {
