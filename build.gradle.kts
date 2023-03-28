@@ -28,7 +28,7 @@ repositories {
     }
 }
 
-extra["mockito.version"] = "4.11.0";
+//extra["mockito.version"] = "4.11.0";
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
@@ -87,7 +87,7 @@ dependencies {
 
     // https://stackoverflow.com/questions/67299161/mock-static-method-in-junit-5-using-mockito
     testImplementation("org.springframework.boot:spring-boot-starter-test") // already includes mockito
-//    testImplementation("org.mockito:mockito-inline:4.11.0")
+    testImplementation("org.mockito:mockito-inline")
 
     // https://mvnrepository.com/artifact/com.h2database/h2
     testImplementation("com.h2database:h2:2.1.214")
