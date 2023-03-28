@@ -1,4 +1,4 @@
-FROM ghcr.io/graalvm/graalvm-ce:ol7-java11-22.3.0 as builder
+FROM transfusion/deployapp-base-container:ol9-java17-23.0.0-dev-app-info-2.8.3 as builder
 
 WORKDIR /app/
 
@@ -8,7 +8,7 @@ COPY gradle ./gradle
 RUN ls -lah
 RUN ./gradlew dependencies
 
-FROM ghcr.io/graalvm/graalvm-ce:ol7-java11-22.3.0
+FROM transfusion/deployapp-base-container:ol9-java17-23.0.0-dev-app-info-2.8.3
 COPY --from=builder /root/.gradle /root/.gradle
 WORKDIR /app
 COPY . /app

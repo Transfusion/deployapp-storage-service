@@ -21,12 +21,10 @@ import io.github.transfusion.deployapp.storagemanagementservice.db.specification
 import io.github.transfusion.deployapp.storagemanagementservice.mappers.AppDetailsMapper;
 import io.github.transfusion.deployapp.storagemanagementservice.services.assets.GeneralAssetsService;
 import io.github.transfusion.deployapp.storagemanagementservice.services.initial_storage.AppBinaryInitialStoreService;
-import io.github.transfusion.deployapp.utilities.GraalPolyglot;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
 import org.jobrunr.scheduling.JobScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +48,8 @@ import java.net.URL;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+
+import static io.github.transfusion.deployapp.utilities.GraalPolyglot.cleanUpRubyContext;
 
 
 @Service
@@ -76,8 +76,8 @@ public class AppBinaryService {
     } */
 
     @Autowired
-    @Qualifier("polyglotEngine")
-    private Engine polyglotEngine;
+    @Qualifier("polyglotContext")
+    private Context polyglotCtx;
 
     @Autowired
     private AppBinaryInitialStoreService appBinaryInitialStoreService;
@@ -155,50 +155,48 @@ public class AppBinaryService {
 
         // if this throws an exception then the context will still be closed.
         AppBinary appBinary = parsingThreadPoolTaskExecutor.submit(() -> {
-            try (Context polyglotCtx = GraalPolyglot.newPolyglotContext(polyglotEngine)) {
-                AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
-                AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
+            AppInfo appInfo = AppInfo.getInstance(polyglotCtx);
+            AbstractPolyglotAdapter data = appInfo.parse_(binary.getAbsolutePath());
 
-                AppBinary res; // the parsed and saved binary
+            AppBinary res; // the parsed and saved binary
 
-                if (data instanceof IPA) {
+            if (data instanceof IPA) {
 //            Ipa ipa = storeIPA(storageCredentialId, credentialCreatedOn, binary, (IPA) data);
-                    Ipa ipa = appDetailsMapper.mapPolyglotIPAtoIpa((IPA) data, id, storageCredentialId, binary.getName());
-                    ipa.setUserId(userId);
-                    ((IPA) data).clear();
-                    res = ipaRepository.saveAndFlush(ipa);
-                    // perform the actual upload asynchronously.
-                    appBinaryInitialStoreService.storeAppBinary(ipa.getId(), storageCredentialId,
-                            credentialCreatedOn, "binary.ipa", binary);
+                Ipa ipa = appDetailsMapper.mapPolyglotIPAtoIpa((IPA) data, id, storageCredentialId, binary.getName());
+                ipa.setUserId(userId);
+                ((IPA) data).clear();
+                res = ipaRepository.saveAndFlush(ipa);
+                // perform the actual upload asynchronously.
+                appBinaryInitialStoreService.storeAppBinary(ipa.getId(), storageCredentialId,
+                        credentialCreatedOn, "binary.ipa", binary);
 
-                } else if (data instanceof APK) {
-                    //            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
-                    Apk apk = appDetailsMapper.mapPolyglotAPKtoApk((APK) data, id, storageCredentialId, binary.getName());
-                    apk.setUserId(userId);
-                    ((APK) data).clear();
-                    res = apkRepository.saveAndFlush(apk);
+            } else if (data instanceof APK) {
+                //            Apk tmp = storeAPK(storageCredentialId, credentialCreatedOn, binary, (APK) data);
+                Apk apk = appDetailsMapper.mapPolyglotAPKtoApk((APK) data, id, storageCredentialId, binary.getName());
+                apk.setUserId(userId);
+                ((APK) data).clear();
+                res = apkRepository.saveAndFlush(apk);
 
-                    for (Iterator<ApkCert> it = Arrays.stream(((APK) data).certificates())
-                            .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
-                            .iterator(); it.hasNext(); ) {
-                        ApkCert cert = it.next();
-                        cert.setId(UUID.randomUUID());
-                        cert.setAppBinary(res);
-                        apkCertRepository.save(cert);
-                    }
-
-                    // perform the actual upload asynchronously
-                    appBinaryInitialStoreService.storeAppBinary(apk.getId(), storageCredentialId,
-                            credentialCreatedOn, "binary.apk", binary);
-                } else {
-                    throw new IllegalArgumentException("Only IPA and APK files supported for now.");
+                for (Iterator<ApkCert> it = ((APK) data).certificates_().stream()
+                        .map(cert -> appDetailsMapper.mapPolyglotAPKCertificateToApkCert(cert))
+                        .iterator(); it.hasNext(); ) {
+                    ApkCert cert = it.next();
+                    cert.setId(UUID.randomUUID());
+                    cert.setAppBinary(res);
+                    apkCertRepository.save(cert);
                 }
-                return res;
-            } finally {
-                System.gc();
+
+                // perform the actual upload asynchronously
+                appBinaryInitialStoreService.storeAppBinary(apk.getId(), storageCredentialId,
+                        credentialCreatedOn, "binary.apk", binary);
+            } else {
+                throw new IllegalArgumentException("Only IPA and APK files supported for now.");
             }
-            // end of try-with-resources block
+            return res;
         }).get();
+
+        cleanUpRubyContext(polyglotCtx);
+
 //        https://stackoverflow.com/questions/39324982/spring-boot-scope-request-is-not-active-for-the-current-thread-in-asynch-me
         if (authentication instanceof AnonymousAuthenticationToken)
             sessionData.getAnonymousAppBinaries().add(appBinary.getId());

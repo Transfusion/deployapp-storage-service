@@ -3,6 +3,7 @@ package io.github.transfusion.deployapp.utilities;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
+import org.springframework.beans.factory.annotation.Value;
 
 public class GraalPolyglot {
     // https://stackoverflow.com/questions/7392466/recursively-convert-hash-containing-non-utf-chars-to-utf
@@ -29,15 +30,22 @@ public class GraalPolyglot {
             Source.create("ruby", monkeyPatchHash)
     };
 
-    public static Context newPolyglotContext() {
-        Context ctx = Context.newBuilder().allowAllAccess(true).build();
-        for (Source source : sources) ctx.eval(source);
-        return ctx;
-    }
-
     public static Context newPolyglotContext(Engine engine) {
         Context ctx = Context.newBuilder().engine(engine).allowAllAccess(true).build();
         for (Source source : sources) ctx.eval(source);
         return ctx;
+    }
+
+    @Value("${custom_app.ruby_clean_sleep}")
+    static int rubyCleanSleep;
+
+    public static void cleanUpRubyContext(Context ctx) {
+        ctx.eval("ruby", "GC.start");
+        System.gc();
+        System.runFinalization();
+        try {
+            Thread.sleep(rubyCleanSleep);
+        } catch (InterruptedException ignored) {
+        }
     }
 }
