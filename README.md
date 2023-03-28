@@ -6,7 +6,7 @@ The storage service is responsible for parsing and managing uploaded apps, and c
 Running `deployapp-storage-service` as part of [`deployapp-platform`](https://github.com/Transfusion/deployapp-platform#running-development) is recommended for a streamlined local development environment setup process.
 
 ## Environment
-GraalVM CE 22.3.1, OpenJDK 11.0.18 is recommended.
+GraalVM CE 23.0.0-dev+, OpenJDK 17 is required.
 
 `deployapp-storage-service` depends on [`app-info-java-graalvm`](https://github.com/Transfusion/app-info-java-graalvm), which in turn depends on [GraalVM](https://www.graalvm.org/) and the [Polyglot API](https://www.graalvm.org/22.0/reference-manual/ruby/Polyglot/).
 
