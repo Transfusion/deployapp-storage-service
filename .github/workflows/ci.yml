@@ -75,7 +75,7 @@ jobs:
           GPR_PAT: ${{ secrets.GITHUB_TOKEN }}
 
   docker-image:
-    # needs: [unit-tests, integration-tests]
+    needs: [unit-tests, integration-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
